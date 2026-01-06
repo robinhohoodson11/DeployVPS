@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import NewDeployment from "./pages/NewDeployment";
 import DeploymentDetails from "./pages/DeploymentDetails";
 import VPSManagement from "./pages/VPSManagement";
+import AdminUsers from "./pages/AdminUsers";
 import "./App.css";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
