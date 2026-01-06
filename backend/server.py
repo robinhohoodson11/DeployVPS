@@ -733,14 +733,57 @@ async def configure_domain(deployment_id: str, config: DomainConfig, user: dict 
         return {
             "message": "Domain configured",
             "domain": domain,
-            "instructions": [
-                f"1. Point your domain '{domain}' A record to your VPS IP: {vps['host']}",
-                "2. For HTTPS, run: sudo certbot --nginx -d " + domain,
-                "3. Your app will be accessible at: http://" + domain
-            ]
+            "vps_host": vps["host"]
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to configure domain: {str(e)}")
+
+
+@api_router.post("/deployments/{deployment_id}/ssl")
+async def configure_ssl(deployment_id: str, user: dict = Depends(get_current_user)):
+    """Configure SSL/HTTPS using Let's Encrypt certbot"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    if not deployment.get("domain"):
+        raise HTTPException(status_code=400, detail="Configure um domínio primeiro antes de ativar HTTPS")
+    
+    vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    domain = deployment["domain"]
+    
+    try:
+        ssh = get_ssh_client(vps)
+        
+        # Check if certbot is installed
+        stdin, stdout, stderr = ssh.exec_command("which certbot")
+        if not stdout.read().decode().strip():
+            # Install certbot
+            await add_deployment_log(deployment_id, "Installing certbot...", "info")
+            ssh.exec_command("apt-get update && apt-get install -y certbot python3-certbot-nginx")
+            await asyncio.sleep(5)
+        
+        # Run certbot
+        await add_deployment_log(deployment_id, f"Configuring SSL for {domain}...", "info")
+        stdin, stdout, stderr = ssh.exec_command(f"certbot --nginx -d {domain} --non-interactive --agree-tos --email admin@{domain} --redirect 2>&1")
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+        
+        ssh.close()
+        
+        if "Congratulations" in output or "Successfully" in output:
+            await add_deployment_log(deployment_id, f"SSL/HTTPS configured successfully for {domain}", "success")
+            return {"message": "SSL configured successfully", "domain": domain, "https_url": f"https://{domain}"}
+        else:
+            await add_deployment_log(deployment_id, f"SSL configuration output: {output}", "warning")
+            return {"message": "SSL configuration attempted", "output": output, "error": error}
+            
+    except Exception as e:
+        await add_deployment_log(deployment_id, f"SSL configuration failed: {str(e)}", "error")
+        raise HTTPException(status_code=500, detail=f"Failed to configure SSL: {str(e)}")
 
 @api_router.delete("/deployments/{deployment_id}/domain")
 async def remove_domain(deployment_id: str, user: dict = Depends(get_current_user)):
