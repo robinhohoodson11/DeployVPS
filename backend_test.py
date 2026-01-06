@@ -216,6 +216,107 @@ class DeployVPSAPITester:
         
         return deployment_id
 
+    def test_new_deployment_features(self, vps_id):
+        """Test new deployment features: admin creation, fullstack detection, dynamic ports"""
+        print("\n🔍 Testing New Deployment Features...")
+        if not self.token or not vps_id:
+            self.log_test("New Deployment Features", False, "No token or VPS ID available")
+            return None
+
+        # Test 1: Deployment with admin creation enabled
+        print("\n  Testing Admin User Creation...")
+        admin_deployment_data = {
+            "vps_id": vps_id,
+            "repo_url": "https://github.com/facebook/react",
+            "branch": "main", 
+            "project_name": "test-admin-app",
+            "port": 3001,
+            "create_mongodb": True,
+            "mongodb_port": 27018,
+            "create_admin": True,
+            "admin_email": "admin@testapp.com",
+            "admin_password": "AdminPass123!"
+        }
+        
+        admin_response = self.run_test("Create Deployment with Admin", "POST", "deployments", 200, admin_deployment_data)
+        admin_deployment_id = None
+        if admin_response:
+            admin_deployment_id = admin_response.get('id')
+            
+            # Verify the response contains expected fields
+            if 'deploy_type' in admin_response:
+                self.log_test("Deploy Type Field Present", True, f"deploy_type: {admin_response.get('deploy_type')}")
+            else:
+                self.log_test("Deploy Type Field Present", False, "deploy_type field missing from response")
+                
+            # Check for backend_port field (should be present for fullstack)
+            if 'backend_port' in admin_response:
+                self.log_test("Backend Port Field Present", True, f"backend_port: {admin_response.get('backend_port')}")
+            else:
+                self.log_test("Backend Port Field Present", False, "backend_port field missing from response")
+
+        # Test 2: Fullstack project detection
+        print("\n  Testing Fullstack Detection...")
+        fullstack_deployment_data = {
+            "vps_id": vps_id,
+            "repo_url": "https://github.com/vercel/next.js",
+            "branch": "main",
+            "project_name": "test-fullstack-app", 
+            "port": 3002,
+            "create_mongodb": False,
+            "create_admin": False
+        }
+        
+        fullstack_response = self.run_test("Create Fullstack Deployment", "POST", "deployments", 200, fullstack_deployment_data)
+        fullstack_deployment_id = None
+        if fullstack_response:
+            fullstack_deployment_id = fullstack_response.get('id')
+
+        # Test 3: Dynamic port assignment for backend
+        print("\n  Testing Dynamic Port Assignment...")
+        dynamic_port_data = {
+            "vps_id": vps_id,
+            "repo_url": "https://github.com/tiangolo/fastapi",
+            "branch": "master",
+            "project_name": "test-backend-app",
+            "port": 3003,
+            "create_mongodb": True,
+            "mongodb_port": 27019,
+            "create_admin": True,
+            "admin_email": "backend@testapp.com", 
+            "admin_password": "BackendPass123!"
+        }
+        
+        dynamic_response = self.run_test("Create Backend with Dynamic Port", "POST", "deployments", 200, dynamic_port_data)
+        dynamic_deployment_id = None
+        if dynamic_response:
+            dynamic_deployment_id = dynamic_response.get('id')
+            
+            # Verify backend port is port + 1000
+            expected_backend_port = 3003 + 1000
+            actual_backend_port = dynamic_response.get('backend_port')
+            if actual_backend_port == expected_backend_port:
+                self.log_test("Dynamic Port Calculation", True, f"Backend port correctly set to {actual_backend_port}")
+            else:
+                self.log_test("Dynamic Port Calculation", False, f"Expected {expected_backend_port}, got {actual_backend_port}")
+
+        # Test 4: Verify deployment details include admin credentials
+        if admin_deployment_id:
+            print("\n  Testing Admin Credentials in Response...")
+            detail_response = self.run_test("Get Deployment with Admin Details", "GET", f"deployments/{admin_deployment_id}", 200)
+            if detail_response:
+                admin_creds = detail_response.get('admin_credentials')
+                if admin_creds and isinstance(admin_creds, dict):
+                    if 'email' in admin_creds and 'password' in admin_creds:
+                        self.log_test("Admin Credentials Present", True, f"Admin email: {admin_creds.get('email')}")
+                    else:
+                        self.log_test("Admin Credentials Present", False, "Admin credentials missing email/password fields")
+                else:
+                    self.log_test("Admin Credentials Present", False, "admin_credentials field missing or invalid")
+
+        # Return deployment IDs for cleanup
+        return [admin_deployment_id, fullstack_deployment_id, dynamic_deployment_id]
+
     def test_domain_configuration(self, deployment_id):
         """Test domain configuration"""
         print("\n🔍 Testing Domain Configuration...")
