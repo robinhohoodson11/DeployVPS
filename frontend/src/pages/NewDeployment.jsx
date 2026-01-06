@@ -94,6 +94,9 @@ export default function NewDeployment() {
         env_vars: parseEnvVars(form.env_vars),
         create_mongodb: form.create_mongodb,
         mongodb_port: form.mongodb_port,
+        create_admin: form.create_admin,
+        admin_email: form.admin_email,
+        admin_password: form.admin_password,
       };
       
       const response = await api.post("/deployments", payload);
