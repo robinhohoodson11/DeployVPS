@@ -530,6 +530,18 @@ async def create_deployment(data: DeploymentCreate, background_tasks: Background
     if not vps:
         raise HTTPException(status_code=404, detail="VPS not found")
     
+    # Check if port is already in use on this VPS
+    existing_deployment = await db.deployments.find_one({
+        "vps_id": data.vps_id, 
+        "port": data.port,
+        "status": {"$in": ["running", "pending", "cloning", "building", "deploying"]}
+    })
+    if existing_deployment:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Porta {data.port} já está em uso pelo projeto '{existing_deployment['project_name']}' nesta VPS. Use outra porta."
+        )
+    
     deployment_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
