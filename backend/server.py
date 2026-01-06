@@ -131,6 +131,9 @@ class DeploymentResponse(BaseModel):
     logs: List[LogEntryResponse] = []
     domain: Optional[str] = None
     mongodb_url: Optional[str] = None
+    deploy_type: Optional[str] = None  # "frontend_only", "backend_only", "fullstack"
+    backend_port: Optional[int] = None
+    admin_credentials: Optional[dict] = None
     created_at: str
     updated_at: str
 
