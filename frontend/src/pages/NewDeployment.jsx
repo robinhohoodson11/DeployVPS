@@ -278,6 +278,43 @@ export default function NewDeployment() {
                   </p>
                 </div>
                 
+                {/* MongoDB Option */}
+                <div className="border border-zinc-800 rounded-lg p-4 space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="create_mongodb"
+                      checked={form.create_mongodb}
+                      onCheckedChange={(checked) => setForm({ ...form, create_mongodb: checked })}
+                      data-testid="create-mongodb-checkbox"
+                      className="border-zinc-600 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Database className="w-4 h-4 text-green-500" />
+                      <Label htmlFor="create_mongodb" className="text-zinc-300 cursor-pointer">
+                        Criar banco MongoDB na VPS
+                      </Label>
+                    </div>
+                  </div>
+                  
+                  {form.create_mongodb && (
+                    <div className="ml-6 space-y-2">
+                      <Label className="text-zinc-400 text-sm">Porta do MongoDB</Label>
+                      <Input
+                        type="number"
+                        placeholder="27017"
+                        value={form.mongodb_port}
+                        onChange={(e) => setForm({ ...form, mongodb_port: parseInt(e.target.value) })}
+                        data-testid="mongodb-port-input"
+                        className="bg-zinc-800/50 border-zinc-700 font-mono w-32"
+                      />
+                      <p className="text-xs text-zinc-500">
+                        O MongoDB será criado como container Docker na sua VPS com dados persistentes.
+                        As variáveis MONGO_URL, MONGODB_URL e DATABASE_URL serão configuradas automaticamente.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
                   <Button
                     type="button"
