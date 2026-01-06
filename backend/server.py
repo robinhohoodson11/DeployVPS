@@ -340,14 +340,14 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
         stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/Dockerfile && echo 'exists'")
         has_dockerfile = "exists" in stdout.read().decode()
         
+        # Check for package.json (Node.js) or requirements.txt (Python)
+        stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/package.json && echo 'node'")
+        is_node = "node" in stdout.read().decode()
+        
+        stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/requirements.txt && echo 'python'")
+        is_python = "python" in stdout.read().decode()
+        
         if not has_dockerfile:
-            # Check for package.json (Node.js) or requirements.txt (Python)
-            stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/package.json && echo 'node'")
-            is_node = "node" in stdout.read().decode()
-            
-            stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/requirements.txt && echo 'python'")
-            is_python = "python" in stdout.read().decode()
-            
             if is_node:
                 dockerfile = """FROM node:18-alpine
 WORKDIR /app
