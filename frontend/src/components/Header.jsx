@@ -46,6 +46,17 @@ export default function Header() {
               <Server className="w-4 h-4" />
               Servidores
             </Link>
+            
+            {user?.role === "admin" && (
+              <Link 
+                to="/admin/users" 
+                className="text-sm text-yellow-500 hover:text-yellow-400 transition-colors flex items-center gap-1"
+                data-testid="nav-admin"
+              >
+                <Shield className="w-4 h-4" />
+                Admin
+              </Link>
+            )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
