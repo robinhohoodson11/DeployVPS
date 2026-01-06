@@ -1,0 +1,16 @@
+{
+  "short_name": "DeployVPS",
+  "name": "DeployVPS - Deploy Automático para VPS",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#09090b",
+  "background_color": "#09090b",
+  "description": "Sistema de deploy automático para VPS. Hospede seus projetos do GitHub diretamente em sua VPS pessoal."
+}
