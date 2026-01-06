@@ -110,6 +110,9 @@ class DeploymentCreate(BaseModel):
     github_token: Optional[str] = None
     create_mongodb: bool = False
     mongodb_port: int = 27017
+    create_admin: bool = False
+    admin_email: str = "admin@admin.com"
+    admin_password: str = "Admin@123"
 
 class LogEntryResponse(BaseModel):
     timestamp: str
