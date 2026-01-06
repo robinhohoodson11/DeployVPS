@@ -333,11 +333,16 @@ class DeployVPSAPITester:
         
         return True
 
-    def test_cleanup(self, vps_id, deployment_id):
+    def test_cleanup(self, vps_id, deployment_ids):
         """Clean up test data"""
         print("\n🔍 Cleaning Up Test Data...")
-        if deployment_id:
-            self.run_test("Delete Deployment", "DELETE", f"deployments/{deployment_id}", 200)
+        if deployment_ids:
+            if isinstance(deployment_ids, list):
+                for deployment_id in deployment_ids:
+                    if deployment_id:
+                        self.run_test(f"Delete Deployment {deployment_id[:8]}", "DELETE", f"deployments/{deployment_id}", 200)
+            else:
+                self.run_test("Delete Deployment", "DELETE", f"deployments/{deployment_ids}", 200)
         if vps_id:
             self.run_test("Delete VPS", "DELETE", f"vps/{vps_id}", 200)
 
