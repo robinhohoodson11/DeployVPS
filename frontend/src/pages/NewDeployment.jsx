@@ -32,6 +32,8 @@ export default function NewDeployment() {
     port: 3000,
     github_token: "",
     env_vars: "",
+    create_mongodb: false,
+    mongodb_port: 27017,
   });
 
   useEffect(() => {
