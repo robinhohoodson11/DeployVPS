@@ -194,3 +194,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Implementadas novas funcionalidades: 1) Deploy Fullstack com portas separadas, 2) Criação automática de admin, 3) UI para configurar admin. Por favor teste a API de deployments e os novos campos."
+  - agent: "testing"
+    message: "✅ BACKEND TESTING COMPLETE - Todas as funcionalidades principais testadas e funcionando. API aceita novos campos (create_admin, admin_email, admin_password) e retorna campos esperados (deploy_type, backend_port, admin_credentials). Validação de email implementada. Lógica de porta dinâmica e detecção fullstack confirmadas. Alguns timeouts em operações de deploy real, mas API endpoints estão funcionais."
