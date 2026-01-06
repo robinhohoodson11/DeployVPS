@@ -1,0 +1,152 @@
+{
+  "identity": {
+    "name": "E1: The Anti-AI Designer",
+    "archetype": "Retro-Futurism (The 'Terminal' Look)",
+    "vibe": "Technical, Precision, High-Contrast, Developer-First",
+    "principles": [
+      "Fusion over Imitation: CLI aesthetics in a GUI wrapper",
+      "Emotion First: Confidence and Control",
+      "Content is King: Data density over whitespace",
+      "Contrast: Neon on Void",
+      "Negative Space: Strategic breathing room in a dense grid"
+    ]
+  },
+  "typography": {
+    "fonts": {
+      "headings": {
+        "family": "Space Grotesk, sans-serif",
+        "weights": ["600", "700"],
+        "usage": "Page titles, Section headers, Hero text"
+      },
+      "body": {
+        "family": "Inter, sans-serif",
+        "weights": ["400", "500"],
+        "usage": "General UI text, descriptions, labels"
+      },
+      "mono": {
+        "family": "JetBrains Mono, monospace",
+        "weights": ["400", "500"],
+        "usage": "Logs, IDs, IP addresses, Status codes, Data tables"
+      }
+    },
+    "rules": [
+      "Headings > 32px must use tracking-tight",
+      "Overlines/Labels must be Uppercase + tracking-widest + text-xs",
+      "Use Monospace for ALL numerical data and identifiers"
+    ]
+  },
+  "colors": {
+    "palette": {
+      "background": "#09090b",
+      "foreground": "#fafafa",
+      "card": "#09090b",
+      "card_foreground": "#fafafa",
+      "popover": "#09090b",
+      "popover_foreground": "#fafafa",
+      "primary": "#22c55e",
+      "primary_foreground": "#000000",
+      "secondary": "#27272a",
+      "secondary_foreground": "#fafafa",
+      "muted": "#27272a",
+      "muted_foreground": "#a1a1aa",
+      "accent": "#27272a",
+      "accent_foreground": "#fafafa",
+      "destructive": "#ef4444",
+      "destructive_foreground": "#fafafa",
+      "border": "#27272a",
+      "input": "#27272a",
+      "ring": "#22c55e"
+    },
+    "semantic": {
+      "success": "#22c55e",
+      "warning": "#f59e0b",
+      "error": "#ef4444",
+      "info": "#3b82f6",
+      "deploying": "#eab308"
+    },
+    "gradients": {
+      "glow": "radial-gradient(circle at center, rgba(34, 197, 94, 0.15) 0%, transparent 70%)",
+      "scanline": "linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2))"
+    }
+  },
+  "layout": {
+    "grid_system": "The 'Control Room' Grid",
+    "spacing": {
+      "container_padding": "p-6 md:p-8 lg:p-12",
+      "gap": "gap-4 md:gap-6",
+      "internal_padding": "p-4 or p-6"
+    },
+    "strategies": [
+      "Dashboard: Dense grid, 100% width utilization, no jagged bottoms",
+      "Landing: Asymmetric 'Tetris' grid, large typography, negative space",
+      "Forms: Single column max-w-md for focus, or split view with context"
+    ]
+  },
+  "components": {
+    "buttons": {
+      "style": "Sharp edges or rounded-sm",
+      "hover": "brightness-110 scale-[1.02] transition-all duration-200",
+      "active": "scale-[0.98]"
+    },
+    "cards": {
+      "style": "Border-only (1px solid border-border), No shadow, bg-card",
+      "hover": "border-primary/50 transition-colors duration-300"
+    },
+    "inputs": {
+      "style": "bg-secondary/50 border-input focus:ring-1 focus:ring-primary rounded-sm"
+    },
+    "status_indicators": {
+      "style": "Glowing dot (w-2 h-2 rounded-full bg-current shadow-[0_0_8px_currentColor])"
+    }
+  },
+  "visual_enhancers": {
+    "textures": [
+      "Grid Pattern: bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]",
+      "Subtle Noise: opacity-20 mix-blend-overlay"
+    ],
+    "effects": [
+      "Tracing Beam: Animated gradient border for active deployments",
+      "Glassmorphism: backdrop-blur-xl bg-black/60 border-b border-white/10 (Header only)"
+    ]
+  },
+  "motion": {
+    "transitions": "transition-all duration-200 ease-out",
+    "animations": {
+      "fade_in": "animate-in fade-in duration-500",
+      "slide_up": "animate-in slide-in-from-bottom-4 duration-500",
+      "pulse_glow": "animate-pulse"
+    }
+  },
+  "assets": {
+    "icons": "Lucide React (default) or Phosphor Icons (for density)",
+    "images": [
+      {
+        "category": "background",
+        "url": "https://images.unsplash.com/photo-1684503830677-d1ce5ab1663e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxmdXR1cmlzdGljJTIwZGlnaXRhbCUyMG5ldHdvcmslMjBiYWNrZ3JvdW5kJTIwZGFya3xlbnwwfHx8fDE3Njc2Njc3MjR8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract dots pattern for subtle background texture"
+      },
+      {
+        "category": "hero",
+        "url": "https://images.unsplash.com/photo-1607694418429-5cfe3b73bb35?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMHNlcnZlciUyMGRhdGElMjBjZW50ZXIlMjBkYXJrJTIwbmVvbnxlbnwwfHx8fDE3Njc2Njc3MjJ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Server hallway for landing page hero or empty state"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Implement the 'Retro-Futurism' theme: Dark backgrounds, neon accents, visible grids.",
+    "Use 'Space Grotesk' for headings and 'JetBrains Mono' for all data/code.",
+    "Dashboard layout must be dense ('Control Room' grid). Avoid excessive whitespace in data views.",
+    "Use the provided image URLs for backgrounds or hero sections.",
+    "Ensure all interactive elements have hover states (text color change or border glow).",
+    "Use Shadcn components but customize them to match the 'sharp/tech' aesthetic (remove large rounded corners).",
+    "Add 'data-testid' to all interactive elements."
+  ],
+  "universal_guidelines": [
+    "Avoid 'AI slop' (generic centered layouts, gradients).",
+    "Create depth with z-index and subtle borders, not heavy shadows.",
+    "Micro-animations are mandatory for all interactions.",
+    "Use 2-3x more spacing in content containers (p-8, p-12) but keep data grids dense.",
+    "NEVER use transparent backgrounds without blur/scrim.",
+    "Use 'sonner' for toasts."
+  ]
+}
