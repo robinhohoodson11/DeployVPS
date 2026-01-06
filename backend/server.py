@@ -409,9 +409,12 @@ CMD ["nginx", "-g", "daemon off;"]
         ssh.exec_command(f"sudo ufw allow {port}/tcp 2>/dev/null || sudo iptables -A INPUT -p tcp --dport {port} -j ACCEPT 2>/dev/null || true")
         await asyncio.sleep(1)
         
+        # Determine internal port (nginx uses 80, others use the specified port)
+        internal_port = 80 if not has_dockerfile and not is_node and not is_python else port
+        
         # Run container
-        await add_deployment_log(deployment_id, f"Starting container on port {port}...")
-        run_cmd = f"docker run -d --name {container_name} -p {port}:{port} --restart unless-stopped {env_string} {container_name}:latest"
+        await add_deployment_log(deployment_id, f"Starting container on port {port} (internal: {internal_port})...")
+        run_cmd = f"docker run -d --name {container_name} -p {port}:{internal_port} --restart unless-stopped {env_string} {container_name}:latest"
         stdin, stdout, stderr = ssh.exec_command(run_cmd)
         container_id = stdout.read().decode().strip()[:12]
         
