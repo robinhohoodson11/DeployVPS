@@ -123,13 +123,33 @@ export default function DeploymentDetails() {
     try {
       const response = await api.post(`/deployments/${id}/domain`, { domain });
       toast.success("Domínio configurado!", {
-        description: response.data.instructions[0]
+        description: `Aponte o DNS para ${response.data.vps_host}`
       });
       setDomainDialogOpen(false);
       setDomain("");
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao configurar domínio");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleConfigureSSL = async () => {
+    if (!deployment?.domain) {
+      toast.error("Configure um domínio primeiro");
+      return;
+    }
+    
+    setActionLoading("ssl");
+    try {
+      const response = await api.post(`/deployments/${id}/ssl`);
+      toast.success("HTTPS configurado!", {
+        description: `Acesse: ${response.data.https_url}`
+      });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao configurar SSL");
     } finally {
       setActionLoading(null);
     }
