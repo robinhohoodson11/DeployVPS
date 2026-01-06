@@ -368,8 +368,32 @@ EXPOSE {port}
 CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "{port}"]
 """.format(port=port)
             else:
-                dockerfile = """FROM nginx:alpine
-COPY . /usr/share/nginx/html
+                # For static projects, find where index.html is located
+                await add_deployment_log(deployment_id, "Detecting static project structure...")
+                
+                # Check common static file locations
+                stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && find . -name 'index.html' -type f 2>/dev/null | head -1")
+                index_path = stdout.read().decode().strip()
+                
+                if index_path:
+                    # Get the directory containing index.html
+                    static_dir = "/".join(index_path.split("/")[:-1]) if "/" in index_path else "."
+                    static_dir = static_dir.lstrip("./") or "."
+                    await add_deployment_log(deployment_id, f"Found index.html in: {static_dir}")
+                    copy_from = f"./{static_dir}/*" if static_dir != "." else "./*"
+                else:
+                    copy_from = "./*"
+                    await add_deployment_log(deployment_id, "No index.html found, copying all files")
+                
+                dockerfile = f"""FROM nginx:alpine
+WORKDIR /app
+COPY . /app
+RUN if [ -d "/app/public" ]; then cp -r /app/public/* /usr/share/nginx/html/; \\
+    elif [ -d "/app/dist" ]; then cp -r /app/dist/* /usr/share/nginx/html/; \\
+    elif [ -d "/app/build" ]; then cp -r /app/build/* /usr/share/nginx/html/; \\
+    elif [ -f "/app/index.html" ]; then cp -r /app/* /usr/share/nginx/html/; \\
+    else find /app -name 'index.html' -exec dirname {{}} \\; | head -1 | xargs -I {{}} cp -r {{}}/* /usr/share/nginx/html/; fi
+RUN rm -f /usr/share/nginx/html/Dockerfile /usr/share/nginx/html/*.md /usr/share/nginx/html/.git* 2>/dev/null || true
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 """
