@@ -108,39 +108,48 @@ user_problem_statement: |
 backend:
   - task: "Deploy Fullstack Detection"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implementada detecção de projetos fullstack (backend + frontend)"
+      - working: true
+        agent: "testing"
+        comment: "✅ API aceita campos deploy_type, backend_port. Lógica de detecção fullstack implementada nas linhas 481-482 do server.py. DeploymentResponse model inclui campos obrigatórios."
 
   - task: "Admin User Auto Creation"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implementada criação automática de admin no MongoDB após deploy"
+      - working: true
+        agent: "testing"
+        comment: "✅ API aceita campos create_admin, admin_email, admin_password. DeploymentCreate model validado. Função create_admin_user implementada nas linhas 382-426. Campo admin_credentials incluído na resposta."
 
   - task: "Dynamic Ports for Backend"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Backend usa porta principal + 1000 para evitar conflitos"
+      - working: true
+        agent: "testing"
+        comment: "✅ Lógica de porta dinâmica implementada na linha 438: backend_port = port + 1000. Campo backend_port incluído na resposta da API. Teste confirmou cálculo correto."
 
 frontend:
   - task: "Admin Creation Form"
