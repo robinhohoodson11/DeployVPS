@@ -340,15 +340,38 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
         stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/Dockerfile && echo 'exists'")
         has_dockerfile = "exists" in stdout.read().decode()
         
-        # Check for package.json (Node.js) or requirements.txt (Python)
+        # Check for package.json (Node.js) or requirements.txt (Python) - also in subfolders
         stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/package.json && echo 'node'")
         is_node = "node" in stdout.read().decode()
+        
+        # Check for frontend subfolder with package.json (monorepo structure)
+        stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/frontend/package.json && echo 'frontend'")
+        has_frontend = "frontend" in stdout.read().decode()
         
         stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/requirements.txt && echo 'python'")
         is_python = "python" in stdout.read().decode()
         
+        # Check for backend subfolder
+        stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/backend/requirements.txt && echo 'backend'")
+        has_backend = "backend" in stdout.read().decode()
+        
         if not has_dockerfile:
-            if is_node:
+            if has_frontend:
+                # Monorepo with frontend folder (React/Node)
+                await add_deployment_log(deployment_id, "Detected monorepo with frontend folder")
+                dockerfile = """FROM node:18-alpine as build
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+"""
+            elif is_node:
                 dockerfile = """FROM node:18-alpine
 WORKDIR /app
 COPY package*.json ./
