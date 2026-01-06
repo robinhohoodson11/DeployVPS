@@ -484,11 +484,20 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
         await add_deployment_log(deployment_id, f"Detected project type: {deploy_type.upper()}")
         await db.deployments.update_one({"id": deployment_id}, {"$set": {"deploy_type": deploy_type}})
         
+        # Get VPS host for CORS configuration
+        vps_host = vps["host"]
+        
         # Prepare env vars
         env_string = ""
         if deployment.get("env_vars"):
             for key, value in deployment["env_vars"].items():
                 env_string += f" -e {key}='{value}'"
+        
+        # Add CORS_ORIGINS for fullstack deployments
+        if is_fullstack:
+            cors_origins = f"http://{vps_host}:{port},http://{vps_host}:{backend_port},http://localhost:{port},http://localhost:{backend_port},*"
+            env_string += f" -e CORS_ORIGINS='{cors_origins}'"
+            env_string += f" -e ALLOWED_ORIGINS='{cors_origins}'"
         
         # Create MongoDB container if requested
         mongodb_url = None
