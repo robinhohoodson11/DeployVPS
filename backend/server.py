@@ -362,12 +362,11 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
                 dockerfile = """FROM node:16-alpine as build
 WORKDIR /app
 COPY frontend/package*.json ./
-COPY frontend/yarn.lock* ./
-RUN if [ -f yarn.lock ]; then yarn install --frozen-lockfile; else npm install --legacy-peer-deps; fi
+RUN npm install --legacy-peer-deps
 COPY frontend/ .
 ENV CI=false
 ENV DISABLE_ESLINT_PLUGIN=true
-RUN npm run build || yarn build
+RUN npm run build
 
 FROM nginx:alpine
 COPY --from=build /app/build /usr/share/nginx/html
