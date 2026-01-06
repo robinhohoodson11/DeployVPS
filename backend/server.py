@@ -102,6 +102,11 @@ class DeploymentCreate(BaseModel):
     env_vars: Optional[dict] = None
     github_token: Optional[str] = None
 
+class LogEntryResponse(BaseModel):
+    timestamp: str
+    message: str
+    level: str = "info"
+
 class DeploymentResponse(BaseModel):
     id: str
     vps_id: str
@@ -111,7 +116,7 @@ class DeploymentResponse(BaseModel):
     port: int
     status: str
     container_id: Optional[str] = None
-    logs: List[str] = []
+    logs: List[LogEntryResponse] = []
     domain: Optional[str] = None
     created_at: str
     updated_at: str
