@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 import { 
   ArrowLeft, GitBranch, RefreshCw, Square, Play, Trash2, 
-  Globe, Terminal, Clock, Server, ExternalLink, Loader2, Copy
+  Globe, Terminal, Clock, Server, ExternalLink, Loader2, Copy, Lock, ShieldCheck
 } from "lucide-react";
 import Header from "../components/Header";
 
