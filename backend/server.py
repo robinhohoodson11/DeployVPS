@@ -882,14 +882,24 @@ async def stop_deployment(deployment_id: str, user: dict = Depends(get_current_u
     
     try:
         ssh = get_ssh_client(vps)
-        container_name = f"deploy_{deployment['project_name']}"
-        ssh.exec_command(f"docker stop {container_name}")
+        project_name = deployment['project_name']
+        
+        # Stop all containers for this project (fullstack support)
+        containers_to_stop = [
+            f"deploy_{project_name}",      # Single container deployment
+            f"frontend_{project_name}",    # Fullstack frontend
+            f"backend_{project_name}",     # Fullstack backend
+        ]
+        
+        for container in containers_to_stop:
+            ssh.exec_command(f"docker stop {container} 2>/dev/null")
+        
         ssh.close()
         
         await update_deployment_status(deployment_id, DeployStatus.STOPPED)
-        await add_deployment_log(deployment_id, "Container stopped", "info")
+        await add_deployment_log(deployment_id, "All containers stopped", "info")
         
-        return {"message": "Container stopped"}
+        return {"message": "Containers stopped"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
