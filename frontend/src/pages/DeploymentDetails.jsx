@@ -272,10 +272,28 @@ export default function DeploymentDetails() {
                 <CardTitle className="text-sm font-medium text-zinc-400">Informações</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {deployment.deploy_type && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-500">Tipo</span>
+                    <span className={`font-mono text-xs px-2 py-0.5 rounded ${
+                      deployment.deploy_type === 'fullstack' ? 'bg-purple-500/20 text-purple-400' :
+                      deployment.deploy_type === 'backend_only' ? 'bg-blue-500/20 text-blue-400' :
+                      'bg-green-500/20 text-green-400'
+                    }`}>
+                      {deployment.deploy_type.toUpperCase()}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Porta</span>
+                  <span className="text-zinc-500">Porta Frontend</span>
                   <span className="font-mono">{deployment.port}</span>
                 </div>
+                {deployment.backend_port && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-500">Porta Backend</span>
+                    <span className="font-mono">{deployment.backend_port}</span>
+                  </div>
+                )}
                 {deployment.container_id && (
                   <div className="flex justify-between text-sm">
                     <span className="text-zinc-500">Container ID</span>
@@ -290,6 +308,51 @@ export default function DeploymentDetails() {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Admin Credentials Card */}
+            {deployment.admin_credentials && (
+              <Card className="bg-yellow-500/10 border-yellow-500/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-yellow-500 flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    Credenciais Admin
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between text-sm items-center">
+                    <span className="text-zinc-500">Email</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-yellow-400">{deployment.admin_credentials.email}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(deployment.admin_credentials.email)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-sm items-center">
+                    <span className="text-zinc-500">Senha</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-yellow-400">{deployment.admin_credentials.password}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(deployment.admin_credentials.password)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-zinc-500 pt-2 border-t border-yellow-500/20">
+                    ⚠️ Altere a senha no primeiro acesso
+                  </p>
+                </CardContent>
+              </Card>
+            )}
             
             {vps && (
               <Card className="bg-zinc-900/50 border-zinc-800">
