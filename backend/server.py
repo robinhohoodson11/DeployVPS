@@ -457,7 +457,8 @@ CMD ["nginx", "-g", "daemon off;"]
         await asyncio.sleep(1)
         
         # Determine internal port (nginx uses 80, others use the specified port)
-        internal_port = 80 if not has_dockerfile and not is_node and not is_python else port
+        is_static = not has_dockerfile and not is_node and not is_python and not has_frontend
+        internal_port = 80 if (is_static or has_frontend) else port
         
         # Run container
         await add_deployment_log(deployment_id, f"Starting container on port {port} (internal: {internal_port})...")
