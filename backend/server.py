@@ -899,13 +899,32 @@ async def delete_deployment(deployment_id: str, user: dict = Depends(get_current
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
     
-    # Try to stop and remove container
+    # Try to stop and remove ALL containers (frontend, backend, mongodb)
     vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
     if vps:
         try:
             ssh = get_ssh_client(vps)
-            container_name = f"deploy_{deployment['project_name']}"
-            ssh.exec_command(f"docker stop {container_name}; docker rm {container_name}")
+            project_name = deployment['project_name']
+            
+            # List of all possible container names for this project
+            containers_to_remove = [
+                f"deploy_{project_name}",      # Single container deployment
+                f"frontend_{project_name}",    # Fullstack frontend
+                f"backend_{project_name}",     # Fullstack backend
+                f"mongodb_{project_name}",     # MongoDB container
+            ]
+            
+            # Stop and remove all containers
+            for container in containers_to_remove:
+                ssh.exec_command(f"docker stop {container} 2>/dev/null; docker rm {container} 2>/dev/null")
+            
+            # Also remove the Docker network if it exists
+            network_name = f"network_{project_name}"
+            ssh.exec_command(f"docker network rm {network_name} 2>/dev/null")
+            
+            # Optionally remove deployment directory (commented out for safety)
+            # ssh.exec_command(f"rm -rf /opt/deployments/{project_name}")
+            
             ssh.close()
         except:
             pass
