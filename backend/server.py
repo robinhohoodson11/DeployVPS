@@ -430,11 +430,11 @@ CMD ["nginx", "-g", "daemon off;"]
                 f.write(dockerfile)
             sftp.close()
         
-        # Build Docker image
+        # Build Docker image (no cache to ensure fresh build)
         await add_deployment_log(deployment_id, "Building Docker image...")
         container_name = f"deploy_{project_name}"
         
-        stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && docker build -t {container_name}:latest . 2>&1")
+        stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && docker build --no-cache -t {container_name}:latest . 2>&1")
         build_output = stdout.read().decode()
         await add_deployment_log(deployment_id, build_output[-2000:] if len(build_output) > 2000 else build_output)
         
