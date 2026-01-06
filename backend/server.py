@@ -435,6 +435,17 @@ RUN if [ -d "/app/public" ]; then cp -r /app/public/* /usr/share/nginx/html/; \\
     elif [ -f "/app/index.html" ]; then cp -r /app/* /usr/share/nginx/html/; \\
     else find /app -name 'index.html' -exec dirname {{}} \\; | head -1 | xargs -I {{}} cp -r {{}}/* /usr/share/nginx/html/; fi
 RUN rm -f /usr/share/nginx/html/Dockerfile /usr/share/nginx/html/*.md /usr/share/nginx/html/.git* 2>/dev/null || true
+
+# Configure nginx for SPA routing
+RUN echo 'server {{ \\
+    listen 80; \\
+    location / {{ \\
+        root /usr/share/nginx/html; \\
+        index index.html index.htm; \\
+        try_files $uri $uri/ /index.html; \\
+    }} \\
+}}' > /etc/nginx/conf.d/default.conf
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 """
