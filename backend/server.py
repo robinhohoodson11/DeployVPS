@@ -184,12 +184,17 @@ async def register(user_data: UserCreate):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # First user is admin, others are regular users
+    user_count = await db.users.count_documents({})
+    role = "admin" if user_count == 0 else "user"
+    
     user_id = str(uuid.uuid4())
     user = {
         "id": user_id,
         "email": user_data.email,
         "name": user_data.name,
         "password_hash": hash_password(user_data.password),
+        "role": role,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
@@ -197,7 +202,7 @@ async def register(user_data: UserCreate):
     token = create_token(user_id)
     return TokenResponse(
         access_token=token,
-        user=UserResponse(id=user_id, email=user_data.email, name=user_data.name, created_at=user["created_at"])
+        user=UserResponse(id=user_id, email=user_data.email, name=user_data.name, role=role, created_at=user["created_at"])
     )
 
 @api_router.post("/auth/login", response_model=TokenResponse)
@@ -209,12 +214,12 @@ async def login(credentials: UserLogin):
     token = create_token(user["id"])
     return TokenResponse(
         access_token=token,
-        user=UserResponse(id=user["id"], email=user["email"], name=user["name"], created_at=user["created_at"])
+        user=UserResponse(id=user["id"], email=user["email"], name=user["name"], role=user.get("role", "user"), created_at=user["created_at"])
     )
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(user: dict = Depends(get_current_user)):
-    return UserResponse(id=user["id"], email=user["email"], name=user["name"], created_at=user["created_at"])
+    return UserResponse(id=user["id"], email=user["email"], name=user["name"], role=user.get("role", "user"), created_at=user["created_at"])
 
 # ============ VPS ROUTES ============
 
