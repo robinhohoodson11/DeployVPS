@@ -119,6 +119,7 @@ function App() {
           <Route path="/deploy/new" element={<PrivateRoute><NewDeployment /></PrivateRoute>} />
           <Route path="/deploy/:id" element={<PrivateRoute><DeploymentDetails /></PrivateRoute>} />
           <Route path="/vps" element={<PrivateRoute><VPSManagement /></PrivateRoute>} />
+          <Route path="/admin/users" element={<PrivateRoute><AdminUsers /></PrivateRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
