@@ -359,12 +359,15 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
             if has_frontend:
                 # Monorepo with frontend folder (React/Node)
                 await add_deployment_log(deployment_id, "Detected monorepo with frontend folder")
-                dockerfile = """FROM node:18-alpine as build
+                dockerfile = """FROM node:16-alpine as build
 WORKDIR /app
 COPY frontend/package*.json ./
-RUN npm install --legacy-peer-deps
+COPY frontend/yarn.lock* ./
+RUN if [ -f yarn.lock ]; then yarn install --frozen-lockfile; else npm install --legacy-peer-deps; fi
 COPY frontend/ .
-RUN npm run build
+ENV CI=false
+ENV DISABLE_ESLINT_PLUGIN=true
+RUN npm run build || yarn build
 
 FROM nginx:alpine
 COPY --from=build /app/build /usr/share/nginx/html
