@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { Terminal, Server, LogOut, User, ChevronDown } from "lucide-react";
+import { Terminal, Server, LogOut, User, ChevronDown, Shield } from "lucide-react";
 
 export default function Header() {
   const { user, logout } = useAuth();
