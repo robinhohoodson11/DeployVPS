@@ -362,7 +362,9 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
                 dockerfile = """FROM node:16-alpine as build
 WORKDIR /app
 COPY frontend/package*.json ./
+RUN rm -f package-lock.json
 RUN npm install --legacy-peer-deps
+RUN npm install ajv@^8.12.0 ajv-keywords@^5.1.0 --legacy-peer-deps
 COPY frontend/ .
 ENV CI=false
 ENV DISABLE_ESLINT_PLUGIN=true
