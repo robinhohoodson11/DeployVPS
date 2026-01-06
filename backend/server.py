@@ -101,6 +101,8 @@ class DeploymentCreate(BaseModel):
     port: int = 3000
     env_vars: Optional[dict] = None
     github_token: Optional[str] = None
+    create_mongodb: bool = False
+    mongodb_port: int = 27017
 
 class LogEntryResponse(BaseModel):
     timestamp: str
