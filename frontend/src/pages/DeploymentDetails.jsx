@@ -346,6 +346,24 @@ export default function DeploymentDetails() {
                         <Copy className="w-3 h-3" />
                       </Button>
                     </div>
+                    
+                    {/* SSL/HTTPS Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleConfigureSSL}
+                      disabled={actionLoading === "ssl"}
+                      data-testid="configure-ssl-btn"
+                      className="w-full border-green-500/50 text-green-500 hover:bg-green-500/10"
+                    >
+                      {actionLoading === "ssl" ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <ShieldCheck className="w-4 h-4 mr-2" />
+                      )}
+                      Ativar HTTPS (SSL)
+                    </Button>
+                    
                     <Button
                       variant="outline"
                       size="sm"
