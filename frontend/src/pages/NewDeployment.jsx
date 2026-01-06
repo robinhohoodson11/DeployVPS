@@ -321,6 +321,69 @@ export default function NewDeployment() {
                   )}
                 </div>
                 
+                {/* Admin User Option */}
+                {form.create_mongodb && (
+                  <div className="border border-yellow-500/30 rounded-lg p-4 space-y-4 bg-yellow-500/5">
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id="create_admin"
+                        checked={form.create_admin}
+                        onCheckedChange={(checked) => setForm({ ...form, create_admin: checked })}
+                        data-testid="create-admin-checkbox"
+                        className="border-yellow-500/50 data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Key className="w-4 h-4 text-yellow-500" />
+                        <Label htmlFor="create_admin" className="text-zinc-300 cursor-pointer">
+                          Criar usuário admin automaticamente
+                        </Label>
+                      </div>
+                    </div>
+                    
+                    {form.create_admin && (
+                      <div className="ml-6 space-y-4">
+                        <p className="text-xs text-zinc-500 mb-3">
+                          Após o deploy, um usuário administrador será criado automaticamente no banco de dados.
+                          Você poderá usar essas credenciais para fazer login no sistema.
+                        </p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-zinc-400 text-sm">Email do Admin</Label>
+                            <Input
+                              type="email"
+                              placeholder="admin@admin.com"
+                              value={form.admin_email}
+                              onChange={(e) => setForm({ ...form, admin_email: e.target.value })}
+                              data-testid="admin-email-input"
+                              className="bg-zinc-800/50 border-zinc-700 font-mono"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-zinc-400 text-sm">Senha do Admin</Label>
+                            <Input
+                              type="text"
+                              placeholder="Admin@123"
+                              value={form.admin_password}
+                              onChange={(e) => setForm({ ...form, admin_password: e.target.value })}
+                              data-testid="admin-password-input"
+                              className="bg-zinc-800/50 border-zinc-700 font-mono"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="bg-zinc-800/50 rounded p-3 text-xs">
+                          <p className="text-yellow-500 font-medium mb-1">⚠️ Importante:</p>
+                          <p className="text-zinc-400">
+                            As credenciais serão exibidas nos logs após o deploy. 
+                            Recomenda-se alterar a senha no primeiro acesso.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
                   <Button
                     type="button"
