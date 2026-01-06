@@ -59,6 +59,12 @@ class UserCreate(BaseModel):
     password: str
     name: str
 
+class UserCreateByAdmin(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+    role: str = "user"  # user or admin
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
@@ -67,6 +73,7 @@ class UserResponse(BaseModel):
     id: str
     email: str
     name: str
+    role: str
     created_at: str
 
 class TokenResponse(BaseModel):
