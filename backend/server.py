@@ -404,6 +404,11 @@ CMD ["nginx", "-g", "daemon off;"]
             for key, value in deployment["env_vars"].items():
                 env_string += f" -e {key}='{value}'"
         
+        # Open firewall port
+        await add_deployment_log(deployment_id, f"Opening firewall port {port}...")
+        ssh.exec_command(f"sudo ufw allow {port}/tcp 2>/dev/null || sudo iptables -A INPUT -p tcp --dport {port} -j ACCEPT 2>/dev/null || true")
+        await asyncio.sleep(1)
+        
         # Run container
         await add_deployment_log(deployment_id, f"Starting container on port {port}...")
         run_cmd = f"docker run -d --name {container_name} -p {port}:{port} --restart unless-stopped {env_string} {container_name}:latest"
