@@ -457,6 +457,39 @@ CMD ["nginx", "-g", "daemon off;"]
             for key, value in deployment["env_vars"].items():
                 env_string += f" -e {key}='{value}'"
         
+        # Create MongoDB container if requested
+        mongodb_url = None
+        if deployment.get("create_mongodb"):
+            mongodb_port = deployment.get("mongodb_port", 27017)
+            mongodb_container = f"mongodb_{project_name}"
+            mongodb_volume = f"mongodb_data_{project_name}"
+            
+            await add_deployment_log(deployment_id, f"Setting up MongoDB container...")
+            
+            # Stop existing MongoDB container if any
+            ssh.exec_command(f"docker stop {mongodb_container} 2>/dev/null; docker rm {mongodb_container} 2>/dev/null")
+            await asyncio.sleep(1)
+            
+            # Create volume for data persistence
+            ssh.exec_command(f"docker volume create {mongodb_volume}")
+            
+            # Run MongoDB container
+            mongo_cmd = f"docker run -d --name {mongodb_container} -p {mongodb_port}:27017 -v {mongodb_volume}:/data/db --restart unless-stopped mongo:6"
+            stdin, stdout, stderr = ssh.exec_command(mongo_cmd)
+            mongo_output = stdout.read().decode()
+            
+            if stdout.channel.recv_exit_status() == 0:
+                mongodb_url = f"mongodb://localhost:{mongodb_port}"
+                env_string += f" -e MONGO_URL='{mongodb_url}'"
+                env_string += f" -e MONGODB_URL='{mongodb_url}'"
+                env_string += f" -e DATABASE_URL='{mongodb_url}'"
+                await add_deployment_log(deployment_id, f"MongoDB running on port {mongodb_port}", "success")
+                
+                # Open MongoDB port in firewall (internal only, not exposed externally for security)
+                ssh.exec_command(f"sudo ufw allow from 172.16.0.0/12 to any port {mongodb_port} 2>/dev/null || true")
+            else:
+                await add_deployment_log(deployment_id, f"Warning: Failed to start MongoDB - {stderr.read().decode()}", "warning")
+        
         # Open firewall port
         await add_deployment_log(deployment_id, f"Opening firewall port {port}...")
         ssh.exec_command(f"sudo ufw allow {port}/tcp 2>/dev/null || sudo iptables -A INPUT -p tcp --dport {port} -j ACCEPT 2>/dev/null || true")
