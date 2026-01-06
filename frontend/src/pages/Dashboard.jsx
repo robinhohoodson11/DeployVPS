@@ -27,7 +27,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const fetchData = async () => {
+  const fetchData = async (isInitial = false) => {
     try {
       const [deploymentsRes, vpsRes] = await Promise.all([
         api.get("/deployments"),
@@ -36,15 +36,19 @@ export default function Dashboard() {
       setDeployments(deploymentsRes.data);
       setVpsCount(vpsRes.data.length);
     } catch (error) {
-      toast.error("Erro ao carregar dados");
+      if (isInitial) {
+        toast.error("Erro ao carregar dados");
+      }
     } finally {
-      setLoading(false);
+      if (isInitial) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
+    fetchData(true);
+    const interval = setInterval(() => fetchData(false), 5000);
     return () => clearInterval(interval);
   }, []);
 
