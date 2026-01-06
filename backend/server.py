@@ -362,7 +362,7 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
                 dockerfile = """FROM node:18-alpine as build
 WORKDIR /app
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY frontend/ .
 RUN npm run build
 
