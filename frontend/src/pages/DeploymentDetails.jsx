@@ -44,7 +44,7 @@ export default function DeploymentDetails() {
   const [domain, setDomain] = useState("");
   const logsEndRef = useRef(null);
 
-  const fetchData = async () => {
+  const fetchData = async (isInitial = false) => {
     try {
       const [deployRes, logsRes] = await Promise.all([
         api.get(`/deployments/${id}`),
@@ -53,21 +53,25 @@ export default function DeploymentDetails() {
       setDeployment(deployRes.data);
       setContainerLogs(logsRes.data.container_logs || []);
       
-      if (deployRes.data.vps_id) {
+      if (deployRes.data.vps_id && !vps) {
         const vpsRes = await api.get(`/vps/${deployRes.data.vps_id}`);
         setVps(vpsRes.data);
       }
     } catch (error) {
-      toast.error("Erro ao carregar dados");
-      navigate("/");
+      if (isInitial) {
+        toast.error("Erro ao carregar dados");
+        navigate("/");
+      }
     } finally {
-      setLoading(false);
+      if (isInitial) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 3000);
+    fetchData(true);
+    const interval = setInterval(() => fetchData(false), 3000);
     return () => clearInterval(interval);
   }, [id]);
 
