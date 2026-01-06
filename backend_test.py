@@ -367,15 +367,23 @@ class DeployVPSAPITester:
         
         # Test deployment operations
         deployment_id = None
+        new_deployment_ids = []
         if vps_id:
             deployment_id = self.test_deployment_operations(vps_id)
+            
+            # Test new deployment features
+            new_deployment_ids = self.test_new_deployment_features(vps_id)
             
             # Test domain configuration
             if deployment_id:
                 self.test_domain_configuration(deployment_id)
         
-        # Cleanup
-        self.test_cleanup(vps_id, deployment_id)
+        # Cleanup - combine all deployment IDs
+        all_deployment_ids = [deployment_id] if deployment_id else []
+        if new_deployment_ids:
+            all_deployment_ids.extend([d for d in new_deployment_ids if d])
+        
+        self.test_cleanup(vps_id, all_deployment_ids)
         
         return self.generate_report()
 
