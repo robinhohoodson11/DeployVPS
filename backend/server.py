@@ -221,6 +221,63 @@ async def login(credentials: UserLogin):
 async def get_me(user: dict = Depends(get_current_user)):
     return UserResponse(id=user["id"], email=user["email"], name=user["name"], role=user.get("role", "user"), created_at=user["created_at"])
 
+# ============ ADMIN ROUTES ============
+
+def require_admin(user: dict = Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado. Apenas administradores.")
+    return user
+
+@api_router.get("/admin/users", response_model=List[UserResponse])
+async def list_users(admin: dict = Depends(require_admin)):
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
+    return [UserResponse(**{**u, "role": u.get("role", "user")}) for u in users]
+
+@api_router.post("/admin/users", response_model=UserResponse)
+async def create_user(user_data: UserCreateByAdmin, admin: dict = Depends(require_admin)):
+    existing = await db.users.find_one({"email": user_data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email já cadastrado")
+    
+    user_id = str(uuid.uuid4())
+    user = {
+        "id": user_id,
+        "email": user_data.email,
+        "name": user_data.name,
+        "password_hash": hash_password(user_data.password),
+        "role": user_data.role,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.users.insert_one(user)
+    
+    return UserResponse(id=user_id, email=user_data.email, name=user_data.name, role=user_data.role, created_at=user["created_at"])
+
+@api_router.delete("/admin/users/{user_id}")
+async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
+    if user_id == admin["id"]:
+        raise HTTPException(status_code=400, detail="Não pode deletar a si mesmo")
+    
+    result = await db.users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Also delete user's VPS and deployments
+    await db.vps.delete_many({"user_id": user_id})
+    await db.deployments.delete_many({"user_id": user_id})
+    
+    return {"message": "Usuário deletado"}
+
+@api_router.put("/admin/users/{user_id}/role")
+async def update_user_role(user_id: str, role: str, admin: dict = Depends(require_admin)):
+    if role not in ["admin", "user"]:
+        raise HTTPException(status_code=400, detail="Role deve ser 'admin' ou 'user'")
+    
+    result = await db.users.update_one({"id": user_id}, {"$set": {"role": role}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    return {"message": f"Role atualizado para {role}"}
+
 # ============ VPS ROUTES ============
 
 @api_router.post("/vps", response_model=VPSResponse)
