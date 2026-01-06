@@ -341,7 +341,7 @@ export default function DeploymentDetails() {
                     </Button>
                   </div>
                 ) : (
-                  <Dialog open={domainDialogOpen} onOpenChange={setDomainDialogOpen}>
+                      <Dialog open={domainDialogOpen} onOpenChange={setDomainDialogOpen}>
                     <DialogTrigger asChild>
                       <Button
                         variant="outline"
@@ -353,7 +353,7 @@ export default function DeploymentDetails() {
                         Configurar Domínio
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-zinc-900 border-zinc-800">
+                    <DialogContent className="bg-zinc-900 border-zinc-800 max-w-lg">
                       <DialogHeader>
                         <DialogTitle>Configurar Domínio</DialogTitle>
                         <DialogDescription className="text-zinc-500">
@@ -371,13 +371,54 @@ export default function DeploymentDetails() {
                             className="bg-zinc-800/50 border-zinc-700 font-mono"
                           />
                         </div>
-                        <div className="bg-zinc-800/50 rounded p-4 text-sm text-zinc-400 space-y-2">
-                          <p className="font-medium text-zinc-300">Após configurar:</p>
-                          <ol className="list-decimal list-inside space-y-1">
-                            <li>Aponte o DNS A record para: <span className="font-mono text-green-500">{vps?.host}</span></li>
-                            <li>Para HTTPS, execute no servidor: <span className="font-mono text-xs">certbot --nginx -d {domain || "seu.dominio.com"}</span></li>
-                          </ol>
+                        
+                        <div className="bg-zinc-800/50 rounded-lg p-4 space-y-4">
+                          <p className="font-medium text-zinc-300 flex items-center gap-2">
+                            <span className="bg-green-500/20 text-green-500 px-2 py-0.5 rounded text-xs">Passo a Passo</span>
+                            Como configurar o DNS
+                          </p>
+                          
+                          <div className="space-y-3 text-sm">
+                            <div className="flex gap-3">
+                              <span className="bg-zinc-700 text-zinc-300 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                              <div>
+                                <p className="text-zinc-300">Acesse o painel DNS do seu provedor de domínio</p>
+                                <p className="text-zinc-500 text-xs">(Cloudflare, GoDaddy, Namecheap, Registro.br, etc)</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-3">
+                              <span className="bg-zinc-700 text-zinc-300 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                              <div>
+                                <p className="text-zinc-300">Crie um registro do tipo <span className="font-mono bg-zinc-700 px-1 rounded">A</span></p>
+                                <div className="mt-1 bg-zinc-900 rounded p-2 font-mono text-xs space-y-1">
+                                  <p><span className="text-zinc-500">Tipo:</span> <span className="text-green-500">A</span></p>
+                                  <p><span className="text-zinc-500">Nome:</span> <span className="text-green-500">{domain || "app"}</span> <span className="text-zinc-600">(ou @ para raiz)</span></p>
+                                  <p><span className="text-zinc-500">Valor:</span> <span className="text-green-500">{vps?.host}</span></p>
+                                  <p><span className="text-zinc-500">TTL:</span> <span className="text-green-500">Auto</span> <span className="text-zinc-600">(ou 3600)</span></p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-3">
+                              <span className="bg-zinc-700 text-zinc-300 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                              <div>
+                                <p className="text-zinc-300">Aguarde propagação DNS (até 24h, geralmente minutos)</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-3">
+                              <span className="bg-zinc-700 text-zinc-300 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                              <div>
+                                <p className="text-zinc-300">Para HTTPS (SSL), execute na VPS:</p>
+                                <code className="mt-1 block bg-zinc-900 rounded p-2 font-mono text-xs text-green-400">
+                                  sudo certbot --nginx -d {domain || "seu.dominio.com"}
+                                </code>
+                              </div>
+                            </div>
+                          </div>
                         </div>
+                        
                         <div className="flex justify-end gap-3">
                           <Button
                             variant="outline"
