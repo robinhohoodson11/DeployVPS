@@ -485,6 +485,7 @@ CMD ["nginx", "-g", "daemon off;"]
                 env_string += f" -e MONGODB_URL='{mongodb_url}'"
                 env_string += f" -e DATABASE_URL='{mongodb_url}'"
                 await add_deployment_log(deployment_id, f"MongoDB running on port {mongodb_port}", "success")
+                await db.deployments.update_one({"id": deployment_id}, {"$set": {"mongodb_url": mongodb_url}})
                 
                 # Open MongoDB port in firewall (internal only, not exposed externally for security)
                 ssh.exec_command(f"sudo ufw allow from 172.16.0.0/12 to any port {mongodb_port} 2>/dev/null || true")
