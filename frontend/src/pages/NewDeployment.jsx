@@ -34,6 +34,9 @@ export default function NewDeployment() {
     env_vars: "",
     create_mongodb: false,
     mongodb_port: 27017,
+    create_admin: false,
+    admin_email: "admin@admin.com",
+    admin_password: "Admin@123",
   });
 
   useEffect(() => {
