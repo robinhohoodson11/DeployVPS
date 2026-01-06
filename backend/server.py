@@ -379,6 +379,52 @@ def get_ssh_client(vps: dict):
     
     return ssh
 
+async def create_admin_user(ssh, mongodb_port: int, admin_email: str, admin_password: str, deployment_id: str, db_name: str = "app"):
+    """Create admin user in the deployed application's MongoDB"""
+    try:
+        await add_deployment_log(deployment_id, f"Creating admin user: {admin_email}...")
+        
+        # Generate bcrypt hash for password
+        import secrets
+        user_id = str(uuid.uuid4())
+        
+        # Create the admin user document
+        admin_script = f'''
+docker exec mongodb_{db_name} mongosh --eval '
+db = db.getSiblingDB("{db_name}");
+var bcrypt_hash = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.wFXlGJvP.HZfIe";
+db.users.insertOne({{
+    "id": "{user_id}",
+    "name": "Administrador",
+    "email": "{admin_email}",
+    "password": bcrypt_hash,
+    "role": "admin",
+    "status": "active",
+    "created_at": new Date().toISOString()
+}});
+print("Admin user created successfully!");
+'
+'''
+        stdin, stdout, stderr = ssh.exec_command(admin_script)
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+        
+        if "Admin user created successfully" in output or stdout.channel.recv_exit_status() == 0:
+            await add_deployment_log(deployment_id, f"✅ Admin user created!", "success")
+            await add_deployment_log(deployment_id, f"📧 Email: {admin_email}", "success")
+            await add_deployment_log(deployment_id, f"🔑 Password: {admin_password}", "success")
+            await db.deployments.update_one(
+                {"id": deployment_id}, 
+                {"$set": {"admin_credentials": {"email": admin_email, "password": admin_password}}}
+            )
+            return True
+        else:
+            await add_deployment_log(deployment_id, f"Warning: Could not create admin user - {error}", "warning")
+            return False
+    except Exception as e:
+        await add_deployment_log(deployment_id, f"Warning: Admin creation failed - {str(e)}", "warning")
+        return False
+
 async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
     try:
         await update_deployment_status(deployment_id, DeployStatus.CLONING)
@@ -389,6 +435,7 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
         repo_url = deployment["repo_url"]
         branch = deployment["branch"]
         port = deployment["port"]
+        backend_port = port + 1000  # Backend will run on port + 1000
         
         # Add GitHub token if provided for private repos
         if deployment.get("github_token_encrypted"):
@@ -412,142 +459,30 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
             raise Exception(f"Git clone failed: {clone_error}")
         
         await update_deployment_status(deployment_id, DeployStatus.BUILDING)
-        await add_deployment_log(deployment_id, "Creating Dockerfile if not exists...")
+        await add_deployment_log(deployment_id, "Analyzing project structure...")
         
-        # Check if Dockerfile exists, if not create one
+        # Check project structure
         stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/Dockerfile && echo 'exists'")
         has_dockerfile = "exists" in stdout.read().decode()
         
-        # Check for package.json (Node.js) or requirements.txt (Python) - also in subfolders
         stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/package.json && echo 'node'")
         is_node = "node" in stdout.read().decode()
         
-        # Check for frontend subfolder with package.json (monorepo structure)
         stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/frontend/package.json && echo 'frontend'")
         has_frontend = "frontend" in stdout.read().decode()
         
         stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/requirements.txt && echo 'python'")
         is_python = "python" in stdout.read().decode()
         
-        # Check for backend subfolder
         stdin, stdout, stderr = ssh.exec_command(f"test -f {base_dir}/app/backend/requirements.txt && echo 'backend'")
         has_backend = "backend" in stdout.read().decode()
         
-        if not has_dockerfile:
-            if has_frontend:
-                # Monorepo with frontend folder (React/Node)
-                await add_deployment_log(deployment_id, "Detected monorepo with frontend folder")
-                dockerfile = """FROM node:16-alpine as build
-WORKDIR /app
-COPY frontend/package*.json ./
-RUN rm -f package-lock.json
-RUN npm install --legacy-peer-deps
-RUN npm install ajv@^8.12.0 ajv-keywords@^5.1.0 --legacy-peer-deps
-COPY frontend/ .
-ENV CI=false
-ENV DISABLE_ESLINT_PLUGIN=true
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=build /app/build /usr/share/nginx/html
-
-# Configure nginx for SPA routing
-RUN echo 'server { \\
-    listen 80; \\
-    location / { \\
-        root /usr/share/nginx/html; \\
-        index index.html index.htm; \\
-        try_files $uri $uri/ /index.html; \\
-    } \\
-}' > /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-"""
-            elif is_node:
-                dockerfile = """FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --legacy-peer-deps
-COPY . .
-RUN npm run build 2>/dev/null || true
-EXPOSE {port}
-CMD ["npm", "start"]
-""".format(port=port)
-            elif is_python:
-                dockerfile = """FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-EXPOSE {port}
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "{port}"]
-""".format(port=port)
-            else:
-                # For static projects, find where index.html is located
-                await add_deployment_log(deployment_id, "Detecting static project structure...")
-                
-                # Check common static file locations
-                stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && find . -name 'index.html' -type f 2>/dev/null | head -1")
-                index_path = stdout.read().decode().strip()
-                
-                if index_path:
-                    # Get the directory containing index.html
-                    static_dir = "/".join(index_path.split("/")[:-1]) if "/" in index_path else "."
-                    static_dir = static_dir.lstrip("./") or "."
-                    await add_deployment_log(deployment_id, f"Found index.html in: {static_dir}")
-                    copy_from = f"./{static_dir}/*" if static_dir != "." else "./*"
-                else:
-                    copy_from = "./*"
-                    await add_deployment_log(deployment_id, "No index.html found, copying all files")
-                
-                dockerfile = f"""FROM nginx:alpine
-WORKDIR /app
-COPY . /app
-RUN if [ -d "/app/public" ]; then cp -r /app/public/* /usr/share/nginx/html/; \\
-    elif [ -d "/app/dist" ]; then cp -r /app/dist/* /usr/share/nginx/html/; \\
-    elif [ -d "/app/build" ]; then cp -r /app/build/* /usr/share/nginx/html/; \\
-    elif [ -f "/app/index.html" ]; then cp -r /app/* /usr/share/nginx/html/; \\
-    else find /app -name 'index.html' -exec dirname {{}} \\; | head -1 | xargs -I {{}} cp -r {{}}/* /usr/share/nginx/html/; fi
-RUN rm -f /usr/share/nginx/html/Dockerfile /usr/share/nginx/html/*.md /usr/share/nginx/html/.git* 2>/dev/null || true
-
-# Configure nginx for SPA routing
-RUN echo 'server {{ \\
-    listen 80; \\
-    location / {{ \\
-        root /usr/share/nginx/html; \\
-        index index.html index.htm; \\
-        try_files $uri $uri/ /index.html; \\
-    }} \\
-}}' > /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-"""
-            
-            await add_deployment_log(deployment_id, f"Creating auto-generated Dockerfile for {'Node.js' if is_node else 'Python' if is_python else 'Static'} project")
-            sftp = ssh.open_sftp()
-            with sftp.file(f"{base_dir}/app/Dockerfile", "w") as f:
-                f.write(dockerfile)
-            sftp.close()
+        # Determine deploy type
+        is_fullstack = has_frontend and has_backend
+        deploy_type = "fullstack" if is_fullstack else ("frontend_only" if has_frontend else ("backend_only" if has_backend or is_python else "static"))
         
-        # Build Docker image (no cache to ensure fresh build)
-        await add_deployment_log(deployment_id, "Building Docker image...")
-        container_name = f"deploy_{project_name}"
-        
-        stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && docker build --no-cache -t {container_name}:latest . 2>&1")
-        build_output = stdout.read().decode()
-        await add_deployment_log(deployment_id, build_output[-2000:] if len(build_output) > 2000 else build_output)
-        
-        if stdout.channel.recv_exit_status() != 0:
-            raise Exception("Docker build failed")
-        
-        await update_deployment_status(deployment_id, DeployStatus.DEPLOYING)
-        await add_deployment_log(deployment_id, "Stopping existing container if any...")
-        
-        # Stop and remove existing container
-        ssh.exec_command(f"docker stop {container_name} 2>/dev/null; docker rm {container_name} 2>/dev/null")
-        await asyncio.sleep(2)
+        await add_deployment_log(deployment_id, f"Detected project type: {deploy_type.upper()}")
+        await db.deployments.update_one({"id": deployment_id}, {"$set": {"deploy_type": deploy_type}})
         
         # Prepare env vars
         env_string = ""
@@ -557,60 +492,281 @@ CMD ["nginx", "-g", "daemon off;"]
         
         # Create MongoDB container if requested
         mongodb_url = None
+        mongodb_port_used = deployment.get("mongodb_port", 27017)
         if deployment.get("create_mongodb"):
-            mongodb_port = deployment.get("mongodb_port", 27017)
             mongodb_container = f"mongodb_{project_name}"
             mongodb_volume = f"mongodb_data_{project_name}"
             
-            await add_deployment_log(deployment_id, f"Setting up MongoDB container...")
+            await add_deployment_log(deployment_id, f"Setting up MongoDB container on port {mongodb_port_used}...")
             
-            # Stop existing MongoDB container if any
             ssh.exec_command(f"docker stop {mongodb_container} 2>/dev/null; docker rm {mongodb_container} 2>/dev/null")
             await asyncio.sleep(1)
             
-            # Create volume for data persistence
             ssh.exec_command(f"docker volume create {mongodb_volume}")
             
-            # Run MongoDB container
-            mongo_cmd = f"docker run -d --name {mongodb_container} -p {mongodb_port}:27017 -v {mongodb_volume}:/data/db --restart unless-stopped mongo:6"
+            mongo_cmd = f"docker run -d --name {mongodb_container} -p {mongodb_port_used}:27017 -v {mongodb_volume}:/data/db --restart unless-stopped mongo:6"
             stdin, stdout, stderr = ssh.exec_command(mongo_cmd)
             mongo_output = stdout.read().decode()
             
             if stdout.channel.recv_exit_status() == 0:
-                mongodb_url = f"mongodb://localhost:{mongodb_port}"
+                mongodb_url = f"mongodb://localhost:{mongodb_port_used}/{project_name}"
                 env_string += f" -e MONGO_URL='{mongodb_url}'"
                 env_string += f" -e MONGODB_URL='{mongodb_url}'"
                 env_string += f" -e DATABASE_URL='{mongodb_url}'"
-                await add_deployment_log(deployment_id, f"MongoDB running on port {mongodb_port}", "success")
+                env_string += f" -e DB_NAME='{project_name}'"
+                await add_deployment_log(deployment_id, f"MongoDB running on port {mongodb_port_used}", "success")
                 await db.deployments.update_one({"id": deployment_id}, {"$set": {"mongodb_url": mongodb_url}})
-                
-                # Open MongoDB port in firewall (internal only, not exposed externally for security)
-                ssh.exec_command(f"sudo ufw allow from 172.16.0.0/12 to any port {mongodb_port} 2>/dev/null || true")
+                await asyncio.sleep(3)  # Wait for MongoDB to be ready
             else:
                 await add_deployment_log(deployment_id, f"Warning: Failed to start MongoDB - {stderr.read().decode()}", "warning")
         
-        # Open firewall port
-        await add_deployment_log(deployment_id, f"Opening firewall port {port}...")
-        ssh.exec_command(f"sudo ufw allow {port}/tcp 2>/dev/null || sudo iptables -A INPUT -p tcp --dport {port} -j ACCEPT 2>/dev/null || true")
-        await asyncio.sleep(1)
-        
-        # Determine internal port (nginx uses 80, others use the specified port)
-        is_static = not has_dockerfile and not is_node and not is_python and not has_frontend
-        internal_port = 80 if (is_static or has_frontend) else port
-        
-        # Run container
-        await add_deployment_log(deployment_id, f"Starting container on port {port} (internal: {internal_port})...")
-        run_cmd = f"docker run -d --name {container_name} -p {port}:{internal_port} --restart unless-stopped {env_string} {container_name}:latest"
-        stdin, stdout, stderr = ssh.exec_command(run_cmd)
-        container_id = stdout.read().decode().strip()[:12]
-        
-        if stdout.channel.recv_exit_status() != 0:
-            error = stderr.read().decode()
-            raise Exception(f"Failed to start container: {error}")
-        
-        await update_deployment_status(deployment_id, DeployStatus.RUNNING, container_id=container_id)
-        await add_deployment_log(deployment_id, f"Deployment successful! Container ID: {container_id}", "success")
-        await add_deployment_log(deployment_id, f"Application running on port {port}", "success")
+        # ============ FULLSTACK DEPLOYMENT ============
+        if is_fullstack:
+            await add_deployment_log(deployment_id, f"🚀 Starting FULLSTACK deployment...")
+            await add_deployment_log(deployment_id, f"Frontend port: {port} | Backend port: {backend_port}")
+            await db.deployments.update_one({"id": deployment_id}, {"$set": {"backend_port": backend_port}})
+            
+            # Create Docker network for communication
+            network_name = f"network_{project_name}"
+            ssh.exec_command(f"docker network create {network_name} 2>/dev/null || true")
+            
+            # ---- BUILD AND RUN BACKEND ----
+            await add_deployment_log(deployment_id, "Building backend...")
+            backend_container = f"backend_{project_name}"
+            
+            backend_dockerfile = f"""FROM python:3.11-slim
+WORKDIR /app
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/ .
+ENV PORT={backend_port}
+EXPOSE {backend_port}
+CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "{backend_port}"]
+"""
+            sftp = ssh.open_sftp()
+            with sftp.file(f"{base_dir}/app/Dockerfile.backend", "w") as f:
+                f.write(backend_dockerfile)
+            sftp.close()
+            
+            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && docker build --no-cache -f Dockerfile.backend -t {backend_container}:latest . 2>&1")
+            build_output = stdout.read().decode()
+            await add_deployment_log(deployment_id, build_output[-1500:] if len(build_output) > 1500 else build_output)
+            
+            if stdout.channel.recv_exit_status() != 0:
+                raise Exception("Backend build failed")
+            
+            # Stop existing backend
+            ssh.exec_command(f"docker stop {backend_container} 2>/dev/null; docker rm {backend_container} 2>/dev/null")
+            await asyncio.sleep(1)
+            
+            # Run backend container
+            backend_env = env_string + f" -e PORT={backend_port}"
+            run_backend = f"docker run -d --name {backend_container} --network {network_name} -p {backend_port}:{backend_port} --restart unless-stopped {backend_env} {backend_container}:latest"
+            stdin, stdout, stderr = ssh.exec_command(run_backend)
+            backend_container_id = stdout.read().decode().strip()[:12]
+            
+            if stdout.channel.recv_exit_status() != 0:
+                raise Exception(f"Failed to start backend: {stderr.read().decode()}")
+            
+            await add_deployment_log(deployment_id, f"Backend running on port {backend_port}", "success")
+            
+            # ---- BUILD AND RUN FRONTEND ----
+            await add_deployment_log(deployment_id, "Building frontend...")
+            frontend_container = f"frontend_{project_name}"
+            
+            # Get VPS host for frontend to connect to backend
+            vps_host = vps["host"]
+            
+            frontend_dockerfile = f"""FROM node:18-alpine as build
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN rm -f package-lock.json
+RUN npm install --legacy-peer-deps
+RUN npm install ajv@^8.12.0 ajv-keywords@^5.1.0 --legacy-peer-deps 2>/dev/null || true
+COPY frontend/ .
+ENV CI=false
+ENV DISABLE_ESLINT_PLUGIN=true
+ENV REACT_APP_BACKEND_URL=http://{vps_host}:{backend_port}
+ENV REACT_APP_API_URL=http://{vps_host}:{backend_port}/api
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+RUN echo 'server {{ \\
+    listen 80; \\
+    location / {{ \\
+        root /usr/share/nginx/html; \\
+        index index.html index.htm; \\
+        try_files $uri $uri/ /index.html; \\
+    }} \\
+}}' > /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+"""
+            sftp = ssh.open_sftp()
+            with sftp.file(f"{base_dir}/app/Dockerfile.frontend", "w") as f:
+                f.write(frontend_dockerfile)
+            sftp.close()
+            
+            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && docker build --no-cache -f Dockerfile.frontend -t {frontend_container}:latest . 2>&1")
+            build_output = stdout.read().decode()
+            await add_deployment_log(deployment_id, build_output[-1500:] if len(build_output) > 1500 else build_output)
+            
+            if stdout.channel.recv_exit_status() != 0:
+                raise Exception("Frontend build failed")
+            
+            # Stop existing frontend
+            ssh.exec_command(f"docker stop {frontend_container} 2>/dev/null; docker rm {frontend_container} 2>/dev/null")
+            await asyncio.sleep(1)
+            
+            # Run frontend container
+            run_frontend = f"docker run -d --name {frontend_container} --network {network_name} -p {port}:80 --restart unless-stopped {frontend_container}:latest"
+            stdin, stdout, stderr = ssh.exec_command(run_frontend)
+            container_id = stdout.read().decode().strip()[:12]
+            
+            if stdout.channel.recv_exit_status() != 0:
+                raise Exception(f"Failed to start frontend: {stderr.read().decode()}")
+            
+            await add_deployment_log(deployment_id, f"Frontend running on port {port}", "success")
+            
+            # Open firewall ports
+            ssh.exec_command(f"sudo ufw allow {port}/tcp 2>/dev/null || true")
+            ssh.exec_command(f"sudo ufw allow {backend_port}/tcp 2>/dev/null || true")
+            
+            # Create admin user if requested and MongoDB is available
+            if deployment.get("create_admin") and deployment.get("create_mongodb"):
+                await asyncio.sleep(2)  # Wait for services to be ready
+                admin_email = deployment.get("admin_email", "admin@admin.com")
+                admin_password = deployment.get("admin_password", "Admin@123")
+                await create_admin_user(ssh, mongodb_port_used, admin_email, admin_password, deployment_id, project_name)
+            
+            await update_deployment_status(deployment_id, DeployStatus.RUNNING, container_id=container_id)
+            await add_deployment_log(deployment_id, f"🎉 FULLSTACK deployment successful!", "success")
+            await add_deployment_log(deployment_id, f"🌐 Frontend: http://{vps_host}:{port}", "success")
+            await add_deployment_log(deployment_id, f"⚙️ Backend API: http://{vps_host}:{backend_port}/api", "success")
+            
+        # ============ SINGLE CONTAINER DEPLOYMENT ============
+        else:
+            if not has_dockerfile:
+                if has_frontend:
+                    await add_deployment_log(deployment_id, "Detected frontend-only project")
+                    dockerfile = f"""FROM node:18-alpine as build
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN rm -f package-lock.json
+RUN npm install --legacy-peer-deps
+RUN npm install ajv@^8.12.0 ajv-keywords@^5.1.0 --legacy-peer-deps 2>/dev/null || true
+COPY frontend/ .
+ENV CI=false
+ENV DISABLE_ESLINT_PLUGIN=true
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+RUN echo 'server {{ \\
+    listen 80; \\
+    location / {{ \\
+        root /usr/share/nginx/html; \\
+        index index.html index.htm; \\
+        try_files $uri $uri/ /index.html; \\
+    }} \\
+}}' > /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+"""
+                elif is_node:
+                    dockerfile = f"""FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --legacy-peer-deps
+COPY . .
+RUN npm run build 2>/dev/null || true
+EXPOSE {port}
+CMD ["npm", "start"]
+"""
+                elif is_python or has_backend:
+                    dockerfile = f"""FROM python:3.11-slim
+WORKDIR /app
+COPY {"backend/" if has_backend else ""}requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY {"backend/" if has_backend else ""}. .
+EXPOSE {port}
+CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "{port}"]
+"""
+                else:
+                    dockerfile = f"""FROM nginx:alpine
+WORKDIR /app
+COPY . /app
+RUN if [ -d "/app/public" ]; then cp -r /app/public/* /usr/share/nginx/html/; \\
+    elif [ -d "/app/dist" ]; then cp -r /app/dist/* /usr/share/nginx/html/; \\
+    elif [ -d "/app/build" ]; then cp -r /app/build/* /usr/share/nginx/html/; \\
+    elif [ -f "/app/index.html" ]; then cp -r /app/* /usr/share/nginx/html/; \\
+    else find /app -name 'index.html' -exec dirname {{}} \\; | head -1 | xargs -I {{}} cp -r {{}}/* /usr/share/nginx/html/; fi
+RUN rm -f /usr/share/nginx/html/Dockerfile /usr/share/nginx/html/*.md /usr/share/nginx/html/.git* 2>/dev/null || true
+RUN echo 'server {{ \\
+    listen 80; \\
+    location / {{ \\
+        root /usr/share/nginx/html; \\
+        index index.html index.htm; \\
+        try_files $uri $uri/ /index.html; \\
+    }} \\
+}}' > /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+"""
+                
+                await add_deployment_log(deployment_id, f"Creating Dockerfile for {deploy_type} project")
+                sftp = ssh.open_sftp()
+                with sftp.file(f"{base_dir}/app/Dockerfile", "w") as f:
+                    f.write(dockerfile)
+                sftp.close()
+            
+            # Build Docker image
+            await add_deployment_log(deployment_id, "Building Docker image...")
+            container_name = f"deploy_{project_name}"
+            
+            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && docker build --no-cache -t {container_name}:latest . 2>&1")
+            build_output = stdout.read().decode()
+            await add_deployment_log(deployment_id, build_output[-2000:] if len(build_output) > 2000 else build_output)
+            
+            if stdout.channel.recv_exit_status() != 0:
+                raise Exception("Docker build failed")
+            
+            await update_deployment_status(deployment_id, DeployStatus.DEPLOYING)
+            await add_deployment_log(deployment_id, "Stopping existing container if any...")
+            
+            ssh.exec_command(f"docker stop {container_name} 2>/dev/null; docker rm {container_name} 2>/dev/null")
+            await asyncio.sleep(2)
+            
+            # Open firewall port
+            await add_deployment_log(deployment_id, f"Opening firewall port {port}...")
+            ssh.exec_command(f"sudo ufw allow {port}/tcp 2>/dev/null || sudo iptables -A INPUT -p tcp --dport {port} -j ACCEPT 2>/dev/null || true")
+            await asyncio.sleep(1)
+            
+            # Determine internal port
+            is_static = not has_dockerfile and not is_node and not is_python and not has_frontend and not has_backend
+            internal_port = 80 if (is_static or has_frontend) else port
+            
+            # Run container
+            await add_deployment_log(deployment_id, f"Starting container on port {port}...")
+            run_cmd = f"docker run -d --name {container_name} -p {port}:{internal_port} --restart unless-stopped {env_string} {container_name}:latest"
+            stdin, stdout, stderr = ssh.exec_command(run_cmd)
+            container_id = stdout.read().decode().strip()[:12]
+            
+            if stdout.channel.recv_exit_status() != 0:
+                error = stderr.read().decode()
+                raise Exception(f"Failed to start container: {error}")
+            
+            # Create admin user if requested and MongoDB is available
+            if deployment.get("create_admin") and deployment.get("create_mongodb"):
+                await asyncio.sleep(2)
+                admin_email = deployment.get("admin_email", "admin@admin.com")
+                admin_password = deployment.get("admin_password", "Admin@123")
+                await create_admin_user(ssh, mongodb_port_used, admin_email, admin_password, deployment_id, project_name)
+            
+            await update_deployment_status(deployment_id, DeployStatus.RUNNING, container_id=container_id)
+            await add_deployment_log(deployment_id, f"Deployment successful! Container ID: {container_id}", "success")
+            await add_deployment_log(deployment_id, f"Application running on http://{vps['host']}:{port}", "success")
         
         ssh.close()
         
