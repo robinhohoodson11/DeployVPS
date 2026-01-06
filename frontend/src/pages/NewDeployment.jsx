@@ -89,6 +89,8 @@ export default function NewDeployment() {
         port: form.port,
         github_token: form.github_token || null,
         env_vars: parseEnvVars(form.env_vars),
+        create_mongodb: form.create_mongodb,
+        mongodb_port: form.mongodb_port,
       };
       
       const response = await api.post("/deployments", payload);
