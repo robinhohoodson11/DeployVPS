@@ -120,6 +120,7 @@ class DeploymentResponse(BaseModel):
     container_id: Optional[str] = None
     logs: List[LogEntryResponse] = []
     domain: Optional[str] = None
+    mongodb_url: Optional[str] = None
     created_at: str
     updated_at: str
 
