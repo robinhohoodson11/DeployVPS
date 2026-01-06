@@ -543,11 +543,52 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
             await add_deployment_log(deployment_id, "Building backend...")
             backend_container = f"backend_{project_name}"
             
+            # Create a CORS fix script that will be applied during build
+            cors_fix_script = f'''
+import re
+import os
+
+server_file = "server.py"
+if os.path.exists(server_file):
+    with open(server_file, "r") as f:
+        content = f.read()
+    
+    # Check if CORS middleware exists but is after router
+    if "CORSMiddleware" in content and "app.include_router" in content:
+        # Remove existing CORS middleware setup
+        content = re.sub(r"app\\.add_middleware\\(\\s*CORSMiddleware[^)]+\\)[^)]*\\)", "", content, flags=re.DOTALL)
+        
+        # Add CORS middleware right after app = FastAPI()
+        cors_code = """
+# CORS Middleware (auto-patched by DeployVPS)
+from starlette.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+"""
+        # Insert after app = FastAPI() line
+        content = re.sub(r"(app\\s*=\\s*FastAPI\\([^)]*\\))", r"\\1" + cors_code, content)
+        
+        with open(server_file, "w") as f:
+            f.write(content)
+        print("CORS middleware patched successfully!")
+    else:
+        print("No CORS patch needed or already correct")
+'''
+            
             backend_dockerfile = f"""FROM python:3.11-slim
 WORKDIR /app
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
+
+# Apply CORS fix
+RUN echo '{cors_fix_script}' > /tmp/fix_cors.py && python /tmp/fix_cors.py || true
+
 ENV PORT={backend_port}
 EXPOSE {backend_port}
 CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "{backend_port}"]
