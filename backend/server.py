@@ -542,10 +542,13 @@ async def create_deployment(data: DeploymentCreate, background_tasks: Background
         "port": data.port,
         "env_vars": data.env_vars,
         "github_token_encrypted": encrypt_data(data.github_token) if data.github_token else None,
+        "create_mongodb": data.create_mongodb,
+        "mongodb_port": data.mongodb_port,
         "status": DeployStatus.PENDING,
         "container_id": None,
         "logs": [],
         "domain": None,
+        "mongodb_url": None,
         "created_at": now,
         "updated_at": now
     }
