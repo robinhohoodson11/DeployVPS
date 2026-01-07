@@ -244,9 +244,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Deploy Fullstack Detection"
-    - "Admin User Auto Creation"
-    - "Admin Creation Form"
+    - "User Registration with Pending Approval"
+    - "Pending User Login Blocked"
+    - "Admin Routes Access Control"
+    - "Email Configuration Routes"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -256,3 +257,5 @@ agent_communication:
     message: "Implementadas novas funcionalidades: 1) Deploy Fullstack com portas separadas, 2) Criação automática de admin, 3) UI para configurar admin. Por favor teste a API de deployments e os novos campos."
   - agent: "testing"
     message: "✅ BACKEND TESTING COMPLETE - Todas as funcionalidades principais testadas e funcionando. API aceita novos campos (create_admin, admin_email, admin_password) e retorna campos esperados (deploy_type, backend_port, admin_credentials). Validação de email implementada. Lógica de porta dinâmica e detecção fullstack confirmadas. Alguns timeouts em operações de deploy real, mas API endpoints estão funcionais."
+  - agent: "testing"
+    message: "✅ USER MANAGEMENT SYSTEM TESTING COMPLETE - Testadas as novas funcionalidades do sistema de gerenciamento de usuários: 1) Registro com aprovação pendente (POST /api/auth/register retorna status 'pending'), 2) Login de usuário pendente bloqueado (403 'Conta pendente de aprovação'), 3) Todas as rotas admin protegidas (GET /api/admin/users, /api/admin/users/pending, /api/admin/stats, POST /api/admin/users/{id}/approve, /api/admin/users/{id}/block, PUT /api/admin/users/{id}), 4) Configuração de email protegida (GET/POST /api/admin/settings/email). Sistema de segurança funcionando corretamente - primeiro usuário vira admin, demais ficam pendentes até aprovação."
