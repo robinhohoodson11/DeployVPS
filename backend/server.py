@@ -54,6 +54,12 @@ class DeployStatus(str, Enum):
     FAILED = "failed"
     STOPPED = "stopped"
 
+class UserStatus(str, Enum):
+    PENDING = "pending"
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    BLOCKED = "blocked"
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
@@ -64,6 +70,14 @@ class UserCreateByAdmin(BaseModel):
     password: str
     name: str
     role: str = "user"  # user or admin
+    expires_at: Optional[str] = None  # ISO date string
+    send_email: bool = False
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    status: Optional[str] = None
+    expires_at: Optional[str] = None  # ISO date string or null to remove
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -74,12 +88,32 @@ class UserResponse(BaseModel):
     email: str
     name: str
     role: str
+    status: str = "active"
+    expires_at: Optional[str] = None
     created_at: str
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+class EmailConfig(BaseModel):
+    smtp_host: str
+    smtp_port: int = 587
+    smtp_user: str
+    smtp_password: str
+    smtp_from_name: str = "DeployVPS"
+    smtp_from_email: Optional[str] = None
+    smtp_use_tls: bool = True
+
+class EmailConfigResponse(BaseModel):
+    smtp_host: str
+    smtp_port: int
+    smtp_user: str
+    smtp_from_name: str
+    smtp_from_email: Optional[str]
+    smtp_use_tls: bool
+    configured: bool = True
 
 class VPSCreate(BaseModel):
     name: str
