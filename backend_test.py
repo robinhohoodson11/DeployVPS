@@ -333,6 +333,126 @@ class DeployVPSAPITester:
         
         return True
 
+    def test_user_management_system(self):
+        """Test new user management system features"""
+        print("\n🔍 Testing User Management System...")
+        
+        # Step 1: Test registration with pending approval
+        print("\n  Testing Registration with Pending Approval...")
+        timestamp = datetime.now().strftime('%H%M%S')
+        pending_user_data = {
+            "name": f"Pending User {timestamp}",
+            "email": f"pending{timestamp}@example.com",
+            "password": "pendingpass123"
+        }
+        
+        # Register a new user (should be pending since first user is already admin)
+        pending_response = self.run_test("Register Pending User", "POST", "auth/register", 200, pending_user_data)
+        if pending_response:
+            # Should return status "pending" instead of token
+            if pending_response.get("status") == "pending":
+                self.log_test("Registration Returns Pending Status", True, "User correctly marked as pending")
+            else:
+                self.log_test("Registration Returns Pending Status", False, f"Expected pending status, got: {pending_response}")
+        
+        # Step 2: Test login of pending user (should fail with 403)
+        print("\n  Testing Login of Pending User...")
+        pending_login_data = {
+            "email": pending_user_data["email"],
+            "password": pending_user_data["password"]
+        }
+        
+        # This should fail with 403
+        self.run_test("Login Pending User (Should Fail)", "POST", "auth/login", 403, pending_login_data)
+        
+        # Step 3: Create admin user for testing admin routes
+        print("\n  Creating Admin User for Testing...")
+        admin_timestamp = datetime.now().strftime('%H%M%S')
+        admin_user_data = {
+            "name": f"Admin User {admin_timestamp}",
+            "email": f"admin{admin_timestamp}@example.com",
+            "password": "adminpass123"
+        }
+        
+        # Register first user (should be admin automatically)
+        admin_response = self.run_test("Register Admin User", "POST", "auth/register", 200, admin_user_data)
+        admin_token = None
+        if admin_response and 'access_token' in admin_response:
+            admin_token = admin_response['access_token']
+            admin_user_id = admin_response['user']['id']
+            
+            # Verify user is admin
+            if admin_response['user'].get('role') == 'admin':
+                self.log_test("First User is Admin", True, "First user correctly assigned admin role")
+            else:
+                self.log_test("First User is Admin", False, f"Expected admin role, got: {admin_response['user'].get('role')}")
+        
+        # Step 4: Test admin routes
+        if admin_token:
+            print("\n  Testing Admin Routes...")
+            # Save current token and switch to admin token
+            original_token = self.token
+            self.token = admin_token
+            
+            # Test GET /api/admin/users - list all users
+            users_response = self.run_test("List All Users", "GET", "admin/users", 200)
+            
+            # Test GET /api/admin/users/pending - list pending users
+            pending_users_response = self.run_test("List Pending Users", "GET", "admin/users/pending", 200)
+            
+            # Test GET /api/admin/stats - get statistics
+            stats_response = self.run_test("Get Admin Stats", "GET", "admin/stats", 200)
+            if stats_response:
+                expected_fields = ['total_users', 'pending_users', 'active_users', 'expired_users', 'blocked_users', 'admin_users']
+                missing_fields = [field for field in expected_fields if field not in stats_response]
+                if not missing_fields:
+                    self.log_test("Admin Stats Fields Complete", True, f"All expected fields present: {expected_fields}")
+                else:
+                    self.log_test("Admin Stats Fields Complete", False, f"Missing fields: {missing_fields}")
+            
+            # Find a pending user to test approval/blocking
+            pending_user_id = None
+            if pending_users_response and isinstance(pending_users_response, list) and len(pending_users_response) > 0:
+                pending_user_id = pending_users_response[0]['id']
+                
+                # Test POST /api/admin/users/{id}/approve - approve user
+                approve_response = self.run_test("Approve User", "POST", f"admin/users/{pending_user_id}/approve", 200)
+                
+                # Test POST /api/admin/users/{id}/block - block user
+                block_response = self.run_test("Block User", "POST", f"admin/users/{pending_user_id}/block", 200)
+                
+                # Test PUT /api/admin/users/{id} - update user
+                update_data = {
+                    "name": "Updated User Name",
+                    "role": "user",
+                    "status": "active",
+                    "expires_at": None
+                }
+                update_response = self.run_test("Update User", "PUT", f"admin/users/{pending_user_id}", 200, update_data)
+            
+            # Step 5: Test email configuration routes
+            print("\n  Testing Email Configuration...")
+            
+            # Test GET /api/admin/settings/email - get email config
+            email_config_response = self.run_test("Get Email Config", "GET", "admin/settings/email", 200)
+            
+            # Test POST /api/admin/settings/email - save email config
+            email_config_data = {
+                "smtp_host": "smtp.gmail.com",
+                "smtp_port": 587,
+                "smtp_user": "test@gmail.com",
+                "smtp_password": "testpassword",
+                "smtp_from_name": "DeployVPS Test",
+                "smtp_from_email": "test@gmail.com",
+                "smtp_use_tls": True
+            }
+            save_email_response = self.run_test("Save Email Config", "POST", "admin/settings/email", 200, email_config_data)
+            
+            # Restore original token
+            self.token = original_token
+        
+        return True
+
     def test_cleanup(self, vps_id, deployment_ids):
         """Clean up test data"""
         print("\n🔍 Cleaning Up Test Data...")
