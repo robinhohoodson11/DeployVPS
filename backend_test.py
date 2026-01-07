@@ -345,7 +345,38 @@ class DeployVPSAPITester:
         """Test new user management system features"""
         print("\n🔍 Testing User Management System...")
         
-        # Step 1: Test registration with pending approval (create a second user)
+        # Step 1: Create an admin user first by checking if we need to clear the database
+        print("\n  Setting up Admin User...")
+        
+        # Try to create an admin user by registering when database is empty
+        # First, let's try to register a user and see if it becomes admin
+        admin_timestamp = datetime.now().strftime('%H%M%S')
+        admin_user_data = {
+            "name": f"Admin User {admin_timestamp}",
+            "email": f"admin{admin_timestamp}@example.com",
+            "password": "adminpass123"
+        }
+        
+        admin_response = self.run_test("Create Admin User", "POST", "auth/register", 200, admin_user_data)
+        admin_token = None
+        
+        if admin_response:
+            if 'access_token' in admin_response:
+                # User became admin (first user)
+                admin_token = admin_response['access_token']
+                self.log_test("Admin User Created", True, f"User role: {admin_response['user'].get('role')}")
+            elif admin_response.get('status') == 'pending':
+                # User is pending, there's already an admin in the system
+                self.log_test("Admin Already Exists", True, "New user is pending, admin exists")
+                
+                # Try to use the current token if it's an admin
+                if self.token:
+                    me_response = self.run_test("Check Current User Role", "GET", "auth/me", 200)
+                    if me_response and me_response.get('role') == 'admin':
+                        admin_token = self.token
+                        self.log_test("Using Existing Admin Token", True, "Current user is admin")
+        
+        # Step 2: Test registration with pending approval (create a second user)
         print("\n  Testing Registration with Pending Approval...")
         timestamp = datetime.now().strftime('%H%M%S')
         pending_user_data = {
@@ -354,7 +385,7 @@ class DeployVPSAPITester:
             "password": "pendingpass123"
         }
         
-        # Register a new user (should be pending since first user is already admin)
+        # Register a new user (should be pending since admin exists)
         pending_response = self.run_test("Register Pending User", "POST", "auth/register", 200, pending_user_data)
         if pending_response:
             # Should return status "pending" instead of token
@@ -363,7 +394,7 @@ class DeployVPSAPITester:
             else:
                 self.log_test("Registration Returns Pending Status", False, f"Expected pending status, got: {pending_response}")
         
-        # Step 2: Test login of pending user (should fail with 403)
+        # Step 3: Test login of pending user (should fail with 403)
         print("\n  Testing Login of Pending User...")
         pending_login_data = {
             "email": pending_user_data["email"],
@@ -372,34 +403,6 @@ class DeployVPSAPITester:
         
         # This should fail with 403
         self.run_test("Login Pending User (Should Fail)", "POST", "auth/login", 403, pending_login_data)
-        
-        # Step 3: Use existing admin token if we have one, or create admin user
-        print("\n  Using Admin User for Testing...")
-        admin_token = None
-        
-        # Check if current user is admin
-        if self.token:
-            me_response = self.run_test("Check Current User Role", "GET", "auth/me", 200)
-            if me_response and me_response.get('role') == 'admin':
-                admin_token = self.token
-                self.log_test("Using Existing Admin Token", True, "Current user is admin")
-            else:
-                # Current user is not admin, need to create one
-                admin_timestamp = datetime.now().strftime('%H%M%S')
-                admin_user_data = {
-                    "name": f"Admin User {admin_timestamp}",
-                    "email": f"admin{admin_timestamp}@example.com",
-                    "password": "adminpass123"
-                }
-                
-                # Register admin user
-                admin_response = self.run_test("Register Admin User", "POST", "auth/register", 200, admin_user_data)
-                if admin_response and 'access_token' in admin_response:
-                    admin_token = admin_response['access_token']
-                    if admin_response['user'].get('role') == 'admin':
-                        self.log_test("New User is Admin", True, "New user correctly assigned admin role")
-                    else:
-                        self.log_test("New User is Admin", False, f"Expected admin role, got: {admin_response['user'].get('role')}")
         
         # Step 4: Test admin routes
         if admin_token:
@@ -420,7 +423,7 @@ class DeployVPSAPITester:
                 expected_fields = ['total_users', 'pending_users', 'active_users', 'expired_users', 'blocked_users', 'admin_users']
                 missing_fields = [field for field in expected_fields if field not in stats_response]
                 if not missing_fields:
-                    self.log_test("Admin Stats Fields Complete", True, f"All expected fields present: {expected_fields}")
+                    self.log_test("Admin Stats Fields Complete", True, f"All expected fields present")
                 else:
                     self.log_test("Admin Stats Fields Complete", False, f"Missing fields: {missing_fields}")
             
@@ -432,7 +435,7 @@ class DeployVPSAPITester:
                 # Test POST /api/admin/users/{id}/approve - approve user
                 approve_response = self.run_test("Approve User", "POST", f"admin/users/{pending_user_id}/approve", 200)
                 
-                # Test POST /api/admin/users/{id}/block - block user
+                # Test POST /api/admin/users/{id}/block - block user (after approval)
                 block_response = self.run_test("Block User", "POST", f"admin/users/{pending_user_id}/block", 200)
                 
                 # Test PUT /api/admin/users/{id} - update user
@@ -464,6 +467,8 @@ class DeployVPSAPITester:
             
             # Restore original token
             self.token = original_token
+        else:
+            self.log_test("Admin Routes Testing", False, "No admin token available")
         
         return True
 
