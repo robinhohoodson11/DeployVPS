@@ -482,6 +482,9 @@ class DeployVPSAPITester:
         self.test_user_login()
         self.test_get_current_user()
         
+        # Test new user management system
+        self.test_user_management_system()
+        
         # Test VPS operations
         vps_id = self.test_vps_operations()
         
