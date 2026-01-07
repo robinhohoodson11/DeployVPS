@@ -398,6 +398,36 @@ async def get_me(user: dict = Depends(get_current_user)):
         expires_at=user.get("expires_at"), created_at=user["created_at"]
     )
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@api_router.post("/auth/change-password")
+async def change_password(data: ChangePasswordRequest, user: dict = Depends(get_current_user)):
+    """Allow any authenticated user to change their password"""
+    # Get user with password hash
+    db_user = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Verify current password
+    if not verify_password(data.current_password, db_user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+    
+    # Validate new password
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="A nova senha deve ter pelo menos 6 caracteres")
+    
+    if data.current_password == data.new_password:
+        raise HTTPException(status_code=400, detail="A nova senha deve ser diferente da atual")
+    
+    # Update password
+    new_hash = hash_password(data.new_password)
+    await db.users.update_one({"id": user["id"]}, {"$set": {"password_hash": new_hash}})
+    
+    return {"message": "Senha alterada com sucesso"}
+
+
 # ============ ADMIN ROUTES ============
 
 def require_admin(user: dict = Depends(get_current_user)):
