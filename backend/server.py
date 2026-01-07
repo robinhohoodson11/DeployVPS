@@ -543,60 +543,28 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
             await add_deployment_log(deployment_id, "Building backend...")
             backend_container = f"backend_{project_name}"
             
-            # Create a Python script to fix CORS order
+            # Base64 encoded Python script to fix CORS
+            import base64
             cors_fix_script = '''
 import re
-
 with open("server.py", "r") as f:
     content = f.read()
-
-# Check if CORS needs fixing
-if "CORSMiddleware" in content and "app.include_router" in content:
-    # Remove existing CORS middleware block
-    content = re.sub(
-        r"app\\.add_middleware\\(\\s*CORSMiddleware[^)]+\\)\\s*,?\\s*\\)",
-        "",
-        content,
-        flags=re.DOTALL
-    )
-    
-    # Add CORS middleware right after app = FastAPI()
-    cors_code = """
-
-# CORS Middleware - Auto-patched by DeployVPS
-from starlette.middleware.cors import CORSMiddleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-"""
-    
-    # Find app = FastAPI(...) and add CORS after it
-    pattern = r"(app\\s*=\\s*FastAPI\\([^)]*\\))"
-    if re.search(pattern, content):
-        content = re.sub(pattern, r"\\1" + cors_code, content)
-        
-        with open("server.py", "w") as f:
-            f.write(content)
-        print("CORS middleware reordered successfully!")
-    else:
-        print("Could not find FastAPI app initialization")
-else:
-    print("No CORS fix needed")
+if "CORSMiddleware" in content:
+    content = re.sub(r"app\\.add_middleware\\(\\s*CORSMiddleware[^)]+\\)\\s*,?\\s*\\)", "", content, flags=re.DOTALL)
+    cors_code = "\\n# CORS Auto-patched\\nfrom starlette.middleware.cors import CORSMiddleware\\napp.add_middleware(CORSMiddleware, allow_origins=[\\"*\\"], allow_credentials=False, allow_methods=[\\"*\\"], allow_headers=[\\"*\\"])\\n"
+    content = re.sub(r"(app\\s*=\\s*FastAPI\\([^)]*\\))", r"\\1" + cors_code, content)
+    with open("server.py", "w") as f:
+        f.write(content)
+    print("CORS fixed!")
 '''
+            cors_script_b64 = base64.b64encode(cors_fix_script.encode()).decode()
             
             backend_dockerfile = f"""FROM python:3.11-slim
 WORKDIR /app
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
-
-# Fix CORS order using Python script
-RUN echo '{cors_fix_script}' | python3
-
+RUN echo "{cors_script_b64}" | base64 -d | python3
 ENV PORT={backend_port}
 EXPOSE {backend_port}
 CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "{backend_port}"]
