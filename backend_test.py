@@ -474,8 +474,9 @@ class DeployVPSAPITester:
         # Test health endpoints
         self.test_health_check()
         
-        # Test authentication
-        if not self.test_user_registration():
+        # Test authentication - but don't stop if registration creates admin instead of regular user
+        registration_result = self.test_user_registration()
+        if not registration_result:
             print("❌ Registration failed, stopping tests")
             return self.generate_report()
             
