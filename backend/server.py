@@ -316,15 +316,17 @@ async def send_approval_email(user_email: str, user_name: str):
 
 # ============ AUTH ROUTES ============
 
-@api_router.post("/auth/register", response_model=TokenResponse)
-async def register(user_data: UserCreate):
+@api_router.post("/auth/register")
+async def register(user_data: UserCreate, background_tasks: BackgroundTasks):
     existing = await db.users.find_one({"email": user_data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # First user is admin, others are regular users
+    # First user is admin and active, others need approval
     user_count = await db.users.count_documents({})
-    role = "admin" if user_count == 0 else "user"
+    is_first_user = user_count == 0
+    role = "admin" if is_first_user else "user"
+    status = "active" if is_first_user else "pending"
     
     user_id = str(uuid.uuid4())
     user = {
@@ -333,31 +335,68 @@ async def register(user_data: UserCreate):
         "name": user_data.name,
         "password_hash": hash_password(user_data.password),
         "role": role,
+        "status": status,
+        "expires_at": None,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
     
+    # If user is pending, return message instead of token
+    if status == "pending":
+        return {
+            "message": "Cadastro realizado! Aguarde a aprovação do administrador.",
+            "status": "pending"
+        }
+    
     token = create_token(user_id)
     return TokenResponse(
         access_token=token,
-        user=UserResponse(id=user_id, email=user_data.email, name=user_data.name, role=role, created_at=user["created_at"])
+        user=UserResponse(
+            id=user_id, email=user_data.email, name=user_data.name, 
+            role=role, status=status, expires_at=None, created_at=user["created_at"]
+        )
     )
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
     if not user or not verify_password(credentials.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(status_code=401, detail="Email ou senha inválidos")
+    
+    # Check user status
+    status = user.get("status", "active")
+    if status == "pending":
+        raise HTTPException(status_code=403, detail="Conta pendente de aprovação pelo administrador.")
+    if status == "blocked":
+        raise HTTPException(status_code=403, detail="Conta bloqueada. Entre em contato com o administrador.")
+    
+    # Check expiration
+    if user.get("expires_at"):
+        expires = datetime.fromisoformat(user["expires_at"].replace("Z", "+00:00"))
+        if datetime.now(timezone.utc) > expires:
+            await db.users.update_one({"id": user["id"]}, {"$set": {"status": "expired"}})
+            raise HTTPException(status_code=403, detail="Acesso expirado. Entre em contato com o administrador.")
+    
+    if status == "expired":
+        raise HTTPException(status_code=403, detail="Acesso expirado. Entre em contato com o administrador.")
     
     token = create_token(user["id"])
     return TokenResponse(
         access_token=token,
-        user=UserResponse(id=user["id"], email=user["email"], name=user["name"], role=user.get("role", "user"), created_at=user["created_at"])
+        user=UserResponse(
+            id=user["id"], email=user["email"], name=user["name"], 
+            role=user.get("role", "user"), status=user.get("status", "active"),
+            expires_at=user.get("expires_at"), created_at=user["created_at"]
+        )
     )
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(user: dict = Depends(get_current_user)):
-    return UserResponse(id=user["id"], email=user["email"], name=user["name"], role=user.get("role", "user"), created_at=user["created_at"])
+    return UserResponse(
+        id=user["id"], email=user["email"], name=user["name"], 
+        role=user.get("role", "user"), status=user.get("status", "active"),
+        expires_at=user.get("expires_at"), created_at=user["created_at"]
+    )
 
 # ============ ADMIN ROUTES ============
 
@@ -369,10 +408,24 @@ def require_admin(user: dict = Depends(get_current_user)):
 @api_router.get("/admin/users", response_model=List[UserResponse])
 async def list_users(admin: dict = Depends(require_admin)):
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
-    return [UserResponse(**{**u, "role": u.get("role", "user")}) for u in users]
+    return [UserResponse(
+        id=u["id"], email=u["email"], name=u["name"],
+        role=u.get("role", "user"), status=u.get("status", "active"),
+        expires_at=u.get("expires_at"), created_at=u["created_at"]
+    ) for u in users]
+
+@api_router.get("/admin/users/pending", response_model=List[UserResponse])
+async def list_pending_users(admin: dict = Depends(require_admin)):
+    """List users waiting for approval"""
+    users = await db.users.find({"status": "pending"}, {"_id": 0, "password_hash": 0}).to_list(1000)
+    return [UserResponse(
+        id=u["id"], email=u["email"], name=u["name"],
+        role=u.get("role", "user"), status=u.get("status", "pending"),
+        expires_at=u.get("expires_at"), created_at=u["created_at"]
+    ) for u in users]
 
 @api_router.post("/admin/users", response_model=UserResponse)
-async def create_user(user_data: UserCreateByAdmin, admin: dict = Depends(require_admin)):
+async def create_user(user_data: UserCreateByAdmin, background_tasks: BackgroundTasks, admin: dict = Depends(require_admin)):
     existing = await db.users.find_one({"email": user_data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
