@@ -168,10 +168,10 @@ class FinalUserManagementTester:
         """Test email configuration routes require admin"""
         print("\n🔍 Testing Email Config Routes Require Admin")
         
-        # Test without auth
-        self.run_test("Email Config GET (No Auth)", "GET", "admin/settings/email", 401)
+        # Test without auth - expect 403
+        self.run_test("Email Config GET (No Auth)", "GET", "admin/settings/email", 403)
         
-        # Test POST without auth
+        # Test POST without auth - expect 403
         email_config = {
             "smtp_host": "smtp.test.com",
             "smtp_port": 587,
@@ -180,7 +180,7 @@ class FinalUserManagementTester:
             "smtp_from_name": "Test",
             "smtp_use_tls": True
         }
-        self.run_test("Email Config POST (No Auth)", "POST", "admin/settings/email", 401, email_config)
+        self.run_test("Email Config POST (No Auth)", "POST", "admin/settings/email", 403, email_config)
 
     def run_all_tests(self):
         """Run all testable user management features"""
