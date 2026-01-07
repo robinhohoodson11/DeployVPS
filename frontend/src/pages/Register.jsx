@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../App";
+import { useAuth, api } from "../App";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { toast } from "sonner";
-import { Terminal } from "lucide-react";
+import { Terminal, Clock, CheckCircle } from "lucide-react";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -14,6 +14,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState(null);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -32,15 +33,61 @@ export default function Register() {
     
     setLoading(true);
     try {
-      await register(name, email, password);
-      toast.success("Conta criada com sucesso!");
-      navigate("/");
+      const response = await api.post("/auth/register", { name, email, password });
+      
+      // Check if registration is pending approval
+      if (response.data.status === "pending") {
+        setPendingMessage(response.data.message);
+        toast.success(response.data.message);
+      } else {
+        // First user (admin) - auto login
+        const { access_token, user } = response.data;
+        localStorage.setItem("token", access_token);
+        localStorage.setItem("user", JSON.stringify(user));
+        toast.success("Conta criada com sucesso!");
+        window.location.href = "/";
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao criar conta");
     } finally {
       setLoading(false);
     }
   };
+
+  // Show pending message screen
+  if (pendingMessage) {
+    return (
+      <div className="min-h-screen bg-[#09090b] grid-pattern flex items-center justify-center p-8">
+        <Card className="w-full max-w-md bg-[#09090b] border-zinc-800">
+          <CardHeader className="space-y-1 text-center">
+            <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-4">
+              <Clock className="w-8 h-8 text-yellow-500" />
+            </div>
+            <CardTitle className="text-2xl font-bold tracking-tight">Cadastro Recebido!</CardTitle>
+            <CardDescription className="text-zinc-400 text-base">
+              {pendingMessage}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-zinc-800/50 rounded-lg p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm text-zinc-400">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>Email cadastrado: <strong className="text-zinc-200">{email}</strong></span>
+              </div>
+              <p className="text-xs text-zinc-500">
+                Você receberá um email quando sua conta for aprovada.
+              </p>
+            </div>
+            <Link to="/login">
+              <Button variant="outline" className="w-full border-zinc-700">
+                Voltar para Login
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#09090b] grid-pattern flex items-center justify-center p-8">
@@ -125,7 +172,12 @@ export default function Register() {
               ) : "Criar conta"}
             </Button>
           </form>
-          <p className="mt-6 text-center text-sm text-zinc-500">
+          <div className="mt-4 p-3 bg-zinc-800/30 rounded-lg">
+            <p className="text-xs text-zinc-500 text-center">
+              ⚠️ Após o cadastro, sua conta precisará ser aprovada pelo administrador.
+            </p>
+          </div>
+          <p className="mt-4 text-center text-sm text-zinc-500">
             Já tem uma conta?{" "}
             <Link to="/login" className="text-green-500 hover:text-green-400 font-medium" data-testid="login-link">
               Entrar
