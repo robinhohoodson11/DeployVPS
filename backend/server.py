@@ -204,6 +204,22 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         user = await db.users.find_one({"id": user_id}, {"_id": 0})
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
+        
+        # Check if user is blocked
+        if user.get("status") == "blocked":
+            raise HTTPException(status_code=403, detail="Conta bloqueada. Entre em contato com o administrador.")
+        
+        # Check if user is pending (except admins)
+        if user.get("status") == "pending" and user.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Conta pendente de aprovação pelo administrador.")
+        
+        # Check if user has expired
+        if user.get("expires_at"):
+            expires = datetime.fromisoformat(user["expires_at"].replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) > expires:
+                await db.users.update_one({"id": user_id}, {"$set": {"status": "expired"}})
+                raise HTTPException(status_code=403, detail="Acesso expirado. Entre em contato com o administrador.")
+        
         return user
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -215,6 +231,88 @@ def encrypt_data(data: str) -> str:
 
 def decrypt_data(data: str) -> str:
     return fernet.decrypt(data.encode()).decode()
+
+# ============ EMAIL HELPERS ============
+
+async def send_email(to_email: str, subject: str, html_content: str):
+    """Send email using configured SMTP settings"""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    
+    config = await db.settings.find_one({"type": "email_config"}, {"_id": 0})
+    if not config:
+        logger.warning("Email not configured, skipping send")
+        return False
+    
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f"{config.get('smtp_from_name', 'DeployVPS')} <{config.get('smtp_from_email') or config['smtp_user']}>"
+        msg['To'] = to_email
+        
+        html_part = MIMEText(html_content, 'html')
+        msg.attach(html_part)
+        
+        smtp_password = decrypt_data(config['smtp_password_encrypted'])
+        
+        if config.get('smtp_use_tls', True):
+            server = smtplib.SMTP(config['smtp_host'], config['smtp_port'])
+            server.starttls()
+        else:
+            server = smtplib.SMTP_SSL(config['smtp_host'], config['smtp_port'])
+        
+        server.login(config['smtp_user'], smtp_password)
+        server.sendmail(msg['From'], to_email, msg.as_string())
+        server.quit()
+        
+        logger.info(f"Email sent to {to_email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send email: {str(e)}")
+        return False
+
+async def send_welcome_email(user_email: str, user_name: str, password: str):
+    """Send welcome email with credentials"""
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #09090b; color: #fafafa; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #18181b; border-radius: 8px; padding: 30px;">
+            <h1 style="color: #22c55e; margin-bottom: 20px;">🚀 Bem-vindo ao DeployVPS!</h1>
+            <p>Olá <strong>{user_name}</strong>,</p>
+            <p>Sua conta foi aprovada! Aqui estão suas credenciais de acesso:</p>
+            <div style="background-color: #27272a; border-radius: 4px; padding: 15px; margin: 20px 0;">
+                <p style="margin: 5px 0;"><strong>Email:</strong> {user_email}</p>
+                <p style="margin: 5px 0;"><strong>Senha:</strong> {password}</p>
+            </div>
+            <p>Recomendamos que você altere sua senha após o primeiro acesso.</p>
+            <p style="color: #71717a; margin-top: 30px; font-size: 12px;">
+                Este é um email automático, não responda.
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+    return await send_email(user_email, "🚀 Bem-vindo ao DeployVPS - Suas Credenciais", html_content)
+
+async def send_approval_email(user_email: str, user_name: str):
+    """Send approval notification email"""
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #09090b; color: #fafafa; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #18181b; border-radius: 8px; padding: 30px;">
+            <h1 style="color: #22c55e; margin-bottom: 20px;">✅ Conta Aprovada!</h1>
+            <p>Olá <strong>{user_name}</strong>,</p>
+            <p>Sua conta no DeployVPS foi aprovada pelo administrador.</p>
+            <p>Você já pode acessar o sistema usando suas credenciais cadastradas.</p>
+            <p style="color: #71717a; margin-top: 30px; font-size: 12px;">
+                Este é um email automático, não responda.
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+    return await send_email(user_email, "✅ Sua conta DeployVPS foi aprovada!", html_content)
 
 # ============ AUTH ROUTES ============
 
