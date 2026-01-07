@@ -91,10 +91,18 @@ class DeployVPSAPITester:
         }
         
         response = self.run_test("User Registration", "POST", "auth/register", 200, user_data)
-        if response and 'access_token' in response:
-            self.token = response['access_token']
-            self.user_id = response['user']['id']
-            return True
+        if response:
+            # Check if this is the first user (admin) or a regular user (pending)
+            if 'access_token' in response:
+                # First user becomes admin automatically
+                self.token = response['access_token']
+                self.user_id = response['user']['id']
+                self.log_test("First User Admin Registration", True, f"User role: {response['user'].get('role', 'unknown')}")
+                return True
+            elif response.get('status') == 'pending':
+                # Regular user registration (pending approval)
+                self.log_test("Regular User Pending Registration", True, "User correctly marked as pending")
+                return True
         return False
 
     def test_user_login(self):
