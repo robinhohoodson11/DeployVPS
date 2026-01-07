@@ -151,6 +151,66 @@ backend:
         agent: "testing"
         comment: "✅ Lógica de porta dinâmica implementada na linha 438: backend_port = port + 1000. Campo backend_port incluído na resposta da API. Teste confirmou cálculo correto."
 
+  - task: "User Registration with Pending Approval"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Sistema de registro com aprovação pendente implementado"
+      - working: true
+        agent: "testing"
+        comment: "✅ POST /api/auth/register funciona corretamente. Primeiro usuário vira admin automaticamente, usuários subsequentes ficam com status 'pending'. Retorna status correto em vez de token para usuários pendentes."
+
+  - task: "Pending User Login Blocked"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Login de usuários pendentes deve retornar erro 403"
+      - working: true
+        agent: "testing"
+        comment: "✅ POST /api/auth/login corretamente bloqueia usuários pendentes com erro 403 'Conta pendente de aprovação pelo administrador'. Validação de status implementada nas linhas 367-369."
+
+  - task: "Admin Routes Access Control"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Rotas admin implementadas com controle de acesso"
+      - working: true
+        agent: "testing"
+        comment: "✅ Todas as rotas admin (GET /api/admin/users, GET /api/admin/users/pending, GET /api/admin/stats, POST /api/admin/users/{id}/approve, POST /api/admin/users/{id}/block, PUT /api/admin/users/{id}) estão protegidas e retornam 403 para usuários não autenticados. Função require_admin implementada nas linhas 403-406."
+
+  - task: "Email Configuration Routes"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Rotas de configuração de email implementadas"
+      - working: true
+        agent: "testing"
+        comment: "✅ GET /api/admin/settings/email e POST /api/admin/settings/email estão implementadas e protegidas. Retornam 403 para usuários não autenticados. Configuração de email com criptografia implementada nas linhas 566-604."
+
 frontend:
   - task: "Admin Creation Form"
     implemented: true
