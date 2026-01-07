@@ -384,20 +384,24 @@ async def create_admin_user(ssh, mongodb_port: int, admin_email: str, admin_pass
     try:
         await add_deployment_log(deployment_id, f"Creating admin user: {admin_email}...")
         
-        # Generate bcrypt hash for password
-        import secrets
+        # Generate bcrypt hash for password - MUST generate from actual password!
+        password_hash = bcrypt.hashpw(admin_password.encode(), bcrypt.gensalt()).decode()
         user_id = str(uuid.uuid4())
         
-        # Create the admin user document
+        # Escape special characters for MongoDB shell
+        escaped_hash = password_hash.replace("$", "\\$")
+        
+        # Create the admin user document with properly generated hash
         admin_script = f'''
 docker exec mongodb_{db_name} mongosh --eval '
 db = db.getSiblingDB("{db_name}");
-var bcrypt_hash = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.wFXlGJvP.HZfIe";
+// Delete existing admin if exists
+db.users.deleteMany({{email: "{admin_email}"}});
 db.users.insertOne({{
     "id": "{user_id}",
     "name": "Administrador",
     "email": "{admin_email}",
-    "password": bcrypt_hash,
+    "password": "{password_hash}",
     "role": "admin",
     "status": "active",
     "created_at": new Date().toISOString()
