@@ -437,11 +437,103 @@ async def create_user(user_data: UserCreateByAdmin, background_tasks: Background
         "name": user_data.name,
         "password_hash": hash_password(user_data.password),
         "role": user_data.role,
+        "status": "active",  # Admin-created users are active by default
+        "expires_at": user_data.expires_at,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
     
-    return UserResponse(id=user_id, email=user_data.email, name=user_data.name, role=user_data.role, created_at=user["created_at"])
+    # Send welcome email if requested
+    if user_data.send_email:
+        background_tasks.add_task(send_welcome_email, user_data.email, user_data.name, user_data.password)
+    
+    return UserResponse(
+        id=user_id, email=user_data.email, name=user_data.name, 
+        role=user_data.role, status="active", expires_at=user_data.expires_at,
+        created_at=user["created_at"]
+    )
+
+@api_router.put("/admin/users/{user_id}", response_model=UserResponse)
+async def update_user(user_id: str, user_data: UserUpdate, admin: dict = Depends(require_admin)):
+    """Update user details including status, role, and expiration"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    update_data = {}
+    if user_data.name is not None:
+        update_data["name"] = user_data.name
+    if user_data.role is not None:
+        if user_data.role not in ["admin", "user"]:
+            raise HTTPException(status_code=400, detail="Role deve ser 'admin' ou 'user'")
+        update_data["role"] = user_data.role
+    if user_data.status is not None:
+        if user_data.status not in ["pending", "active", "expired", "blocked"]:
+            raise HTTPException(status_code=400, detail="Status inválido")
+        update_data["status"] = user_data.status
+    if user_data.expires_at is not None:
+        update_data["expires_at"] = user_data.expires_at if user_data.expires_at != "" else None
+    
+    if update_data:
+        await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    updated_user = await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
+    return UserResponse(
+        id=updated_user["id"], email=updated_user["email"], name=updated_user["name"],
+        role=updated_user.get("role", "user"), status=updated_user.get("status", "active"),
+        expires_at=updated_user.get("expires_at"), created_at=updated_user["created_at"]
+    )
+
+@api_router.post("/admin/users/{user_id}/approve")
+async def approve_user(user_id: str, background_tasks: BackgroundTasks, admin: dict = Depends(require_admin)):
+    """Approve a pending user"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    if user.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Usuário não está pendente")
+    
+    await db.users.update_one({"id": user_id}, {"$set": {"status": "active"}})
+    
+    # Send approval email
+    background_tasks.add_task(send_approval_email, user["email"], user["name"])
+    
+    return {"message": "Usuário aprovado com sucesso"}
+
+@api_router.post("/admin/users/{user_id}/reject")
+async def reject_user(user_id: str, admin: dict = Depends(require_admin)):
+    """Reject and delete a pending user"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    if user.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Usuário não está pendente")
+    
+    await db.users.delete_one({"id": user_id})
+    return {"message": "Usuário rejeitado e removido"}
+
+@api_router.post("/admin/users/{user_id}/block")
+async def block_user(user_id: str, admin: dict = Depends(require_admin)):
+    """Block a user"""
+    if user_id == admin["id"]:
+        raise HTTPException(status_code=400, detail="Não pode bloquear a si mesmo")
+    
+    result = await db.users.update_one({"id": user_id}, {"$set": {"status": "blocked"}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    return {"message": "Usuário bloqueado"}
+
+@api_router.post("/admin/users/{user_id}/unblock")
+async def unblock_user(user_id: str, admin: dict = Depends(require_admin)):
+    """Unblock a user"""
+    result = await db.users.update_one({"id": user_id}, {"$set": {"status": "active"}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    return {"message": "Usuário desbloqueado"}
 
 @api_router.delete("/admin/users/{user_id}")
 async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
@@ -468,6 +560,93 @@ async def update_user_role(user_id: str, role: str, admin: dict = Depends(requir
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
     return {"message": f"Role atualizado para {role}"}
+
+# ============ EMAIL CONFIG ROUTES ============
+
+@api_router.get("/admin/settings/email")
+async def get_email_config(admin: dict = Depends(require_admin)):
+    """Get email configuration (without password)"""
+    config = await db.settings.find_one({"type": "email_config"}, {"_id": 0})
+    if not config:
+        return {"configured": False}
+    
+    return EmailConfigResponse(
+        smtp_host=config.get("smtp_host", ""),
+        smtp_port=config.get("smtp_port", 587),
+        smtp_user=config.get("smtp_user", ""),
+        smtp_from_name=config.get("smtp_from_name", "DeployVPS"),
+        smtp_from_email=config.get("smtp_from_email"),
+        smtp_use_tls=config.get("smtp_use_tls", True),
+        configured=True
+    )
+
+@api_router.post("/admin/settings/email")
+async def save_email_config(config: EmailConfig, admin: dict = Depends(require_admin)):
+    """Save email configuration"""
+    config_data = {
+        "type": "email_config",
+        "smtp_host": config.smtp_host,
+        "smtp_port": config.smtp_port,
+        "smtp_user": config.smtp_user,
+        "smtp_password_encrypted": encrypt_data(config.smtp_password),
+        "smtp_from_name": config.smtp_from_name,
+        "smtp_from_email": config.smtp_from_email or config.smtp_user,
+        "smtp_use_tls": config.smtp_use_tls,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.settings.update_one(
+        {"type": "email_config"},
+        {"$set": config_data},
+        upsert=True
+    )
+    
+    return {"message": "Configuração de email salva com sucesso"}
+
+@api_router.post("/admin/settings/email/test")
+async def test_email_config(admin: dict = Depends(require_admin)):
+    """Send a test email to admin"""
+    result = await send_email(
+        admin["email"],
+        "🧪 Teste de Email - DeployVPS",
+        f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #09090b; color: #fafafa; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #18181b; border-radius: 8px; padding: 30px;">
+                <h1 style="color: #22c55e;">✅ Email Configurado!</h1>
+                <p>Este é um email de teste do DeployVPS.</p>
+                <p>Se você está recebendo esta mensagem, a configuração de email está funcionando corretamente.</p>
+            </div>
+        </body>
+        </html>
+        """
+    )
+    
+    if result:
+        return {"message": f"Email de teste enviado para {admin['email']}"}
+    else:
+        raise HTTPException(status_code=500, detail="Falha ao enviar email. Verifique as configurações.")
+
+# ============ ADMIN STATS ============
+
+@api_router.get("/admin/stats")
+async def get_admin_stats(admin: dict = Depends(require_admin)):
+    """Get admin dashboard statistics"""
+    total_users = await db.users.count_documents({})
+    pending_users = await db.users.count_documents({"status": "pending"})
+    active_users = await db.users.count_documents({"status": "active"})
+    expired_users = await db.users.count_documents({"status": "expired"})
+    blocked_users = await db.users.count_documents({"status": "blocked"})
+    admin_users = await db.users.count_documents({"role": "admin"})
+    
+    return {
+        "total_users": total_users,
+        "pending_users": pending_users,
+        "active_users": active_users,
+        "expired_users": expired_users,
+        "blocked_users": blocked_users,
+        "admin_users": admin_users
+    }
 
 # ============ VPS ROUTES ============
 
