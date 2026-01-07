@@ -345,7 +345,7 @@ class DeployVPSAPITester:
         """Test new user management system features"""
         print("\n🔍 Testing User Management System...")
         
-        # Step 1: Test registration with pending approval
+        # Step 1: Test registration with pending approval (create a second user)
         print("\n  Testing Registration with Pending Approval...")
         timestamp = datetime.now().strftime('%H%M%S')
         pending_user_data = {
@@ -373,27 +373,33 @@ class DeployVPSAPITester:
         # This should fail with 403
         self.run_test("Login Pending User (Should Fail)", "POST", "auth/login", 403, pending_login_data)
         
-        # Step 3: Create admin user for testing admin routes
-        print("\n  Creating Admin User for Testing...")
-        admin_timestamp = datetime.now().strftime('%H%M%S')
-        admin_user_data = {
-            "name": f"Admin User {admin_timestamp}",
-            "email": f"admin{admin_timestamp}@example.com",
-            "password": "adminpass123"
-        }
-        
-        # Register first user (should be admin automatically)
-        admin_response = self.run_test("Register Admin User", "POST", "auth/register", 200, admin_user_data)
+        # Step 3: Use existing admin token if we have one, or create admin user
+        print("\n  Using Admin User for Testing...")
         admin_token = None
-        if admin_response and 'access_token' in admin_response:
-            admin_token = admin_response['access_token']
-            admin_user_id = admin_response['user']['id']
-            
-            # Verify user is admin
-            if admin_response['user'].get('role') == 'admin':
-                self.log_test("First User is Admin", True, "First user correctly assigned admin role")
+        
+        # Check if current user is admin
+        if self.token:
+            me_response = self.run_test("Check Current User Role", "GET", "auth/me", 200)
+            if me_response and me_response.get('role') == 'admin':
+                admin_token = self.token
+                self.log_test("Using Existing Admin Token", True, "Current user is admin")
             else:
-                self.log_test("First User is Admin", False, f"Expected admin role, got: {admin_response['user'].get('role')}")
+                # Current user is not admin, need to create one
+                admin_timestamp = datetime.now().strftime('%H%M%S')
+                admin_user_data = {
+                    "name": f"Admin User {admin_timestamp}",
+                    "email": f"admin{admin_timestamp}@example.com",
+                    "password": "adminpass123"
+                }
+                
+                # Register admin user
+                admin_response = self.run_test("Register Admin User", "POST", "auth/register", 200, admin_user_data)
+                if admin_response and 'access_token' in admin_response:
+                    admin_token = admin_response['access_token']
+                    if admin_response['user'].get('role') == 'admin':
+                        self.log_test("New User is Admin", True, "New user correctly assigned admin role")
+                    else:
+                        self.log_test("New User is Admin", False, f"Expected admin role, got: {admin_response['user'].get('role')}")
         
         # Step 4: Test admin routes
         if admin_token:
