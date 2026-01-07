@@ -548,8 +548,7 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
             await add_deployment_log(deployment_id, f"Frontend port: {port} | Backend port: {backend_port}")
             await db.deployments.update_one({"id": deployment_id}, {"$set": {"backend_port": backend_port}})
             
-            # Create Docker network for communication
-            network_name = f"network_{project_name}"
+            # Network already created above, just ensure it exists
             ssh.exec_command(f"docker network create {network_name} 2>/dev/null || true")
             
             # ---- BUILD AND RUN BACKEND ----
