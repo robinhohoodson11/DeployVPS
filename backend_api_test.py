@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 class DeployVPSAPIValidationTester:
-    def __init__(self, base_url="https://auth-control-6.preview.emergentagent.com"):
+    def __init__(self, base_url="https://github-deploy-auth.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.token = None
