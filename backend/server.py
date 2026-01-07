@@ -543,18 +543,59 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
             await add_deployment_log(deployment_id, "Building backend...")
             backend_container = f"backend_{project_name}"
             
+            # Create a Python script to fix CORS order
+            cors_fix_script = '''
+import re
+
+with open("server.py", "r") as f:
+    content = f.read()
+
+# Check if CORS needs fixing
+if "CORSMiddleware" in content and "app.include_router" in content:
+    # Remove existing CORS middleware block
+    content = re.sub(
+        r"app\\.add_middleware\\(\\s*CORSMiddleware[^)]+\\)\\s*,?\\s*\\)",
+        "",
+        content,
+        flags=re.DOTALL
+    )
+    
+    # Add CORS middleware right after app = FastAPI()
+    cors_code = """
+
+# CORS Middleware - Auto-patched by DeployVPS
+from starlette.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+"""
+    
+    # Find app = FastAPI(...) and add CORS after it
+    pattern = r"(app\\s*=\\s*FastAPI\\([^)]*\\))"
+    if re.search(pattern, content):
+        content = re.sub(pattern, r"\\1" + cors_code, content)
+        
+        with open("server.py", "w") as f:
+            f.write(content)
+        print("CORS middleware reordered successfully!")
+    else:
+        print("Could not find FastAPI app initialization")
+else:
+    print("No CORS fix needed")
+'''
+            
             backend_dockerfile = f"""FROM python:3.11-slim
 WORKDIR /app
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
 
-# Fix CORS: Remove allow_credentials=True and ensure CORS is before routes
-RUN if grep -q "CORSMiddleware" server.py; then \\
-    sed -i 's/allow_credentials=True/allow_credentials=False/g' server.py && \\
-    sed -i 's/allow_origins=os.environ.get.*split.*,/allow_origins=["*"],/g' server.py && \\
-    echo "CORS patched successfully"; \\
-    fi
+# Fix CORS order using Python script
+RUN echo '{cors_fix_script}' | python3
 
 ENV PORT={backend_port}
 EXPOSE {backend_port}
