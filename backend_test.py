@@ -630,11 +630,15 @@ class DeployVPSAPITester:
         # Test deployment operations
         deployment_id = None
         new_deployment_ids = []
+        redeploy_deployment_id = None
         if vps_id:
             deployment_id = self.test_deployment_operations(vps_id)
             
             # Test new deployment features
             new_deployment_ids = self.test_new_deployment_features(vps_id)
+            
+            # Test redeploy functionality specifically
+            redeploy_deployment_id = self.test_redeploy_functionality(vps_id)
             
             # Test domain configuration
             if deployment_id:
