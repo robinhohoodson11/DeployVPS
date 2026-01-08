@@ -104,6 +104,7 @@ user_problem_statement: |
   1. Deploy Fullstack - detecta projetos com backend/ e frontend/ e faz deploy separado
   2. Criação automática de admin - após deploy, cria usuário admin no MongoDB
   3. Portas dinâmicas - cada deploy fullstack usa porta+1000 para backend
+  4. Redeploy preserva banco de dados MongoDB - apenas recria frontend e backend
 
 backend:
   - task: "Deploy Fullstack Detection"
