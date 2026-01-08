@@ -1591,7 +1591,7 @@ async def configure_domain(deployment_id: str, config: DomainConfig, user: dict 
 
 @api_router.post("/deployments/{deployment_id}/ssl")
 async def configure_ssl(deployment_id: str, user: dict = Depends(get_current_user)):
-    """Configure SSL/HTTPS using Let's Encrypt certbot"""
+    """Configure SSL/HTTPS using Let's Encrypt certbot (supports both Apache and Nginx)"""
     deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
@@ -1604,32 +1604,125 @@ async def configure_ssl(deployment_id: str, user: dict = Depends(get_current_use
         raise HTTPException(status_code=404, detail="VPS not found")
     
     domain = deployment["domain"]
+    port = deployment["port"]
+    backend_port = deployment.get("backend_port", port + 1000)
+    deploy_type = deployment.get("deploy_type", "static")
+    web_server = deployment.get("web_server", "nginx")
     
     try:
         ssh = get_ssh_client(vps)
         
+        # Auto-detect web server if not stored
+        if not deployment.get("web_server"):
+            stdin, stdout, stderr = ssh.exec_command("netstat -tlnp 2>/dev/null | grep ':80' | head -1")
+            port_80_info = stdout.read().decode()
+            web_server = "apache" if "apache" in port_80_info.lower() else "nginx"
+        
+        await add_deployment_log(deployment_id, f"Configuring SSL with {web_server.upper()}...", "info")
+        
         # Check if certbot is installed
         stdin, stdout, stderr = ssh.exec_command("which certbot")
         if not stdout.read().decode().strip():
-            # Install certbot
             await add_deployment_log(deployment_id, "Installing certbot...", "info")
-            ssh.exec_command("apt-get update && apt-get install -y certbot python3-certbot-nginx")
-            await asyncio.sleep(5)
+            if web_server == "apache":
+                ssh.exec_command("apt-get update && apt-get install -y certbot python3-certbot-apache")
+            else:
+                ssh.exec_command("apt-get update && apt-get install -y certbot python3-certbot-nginx")
+            await asyncio.sleep(10)
         
-        # Run certbot
         await add_deployment_log(deployment_id, f"Configuring SSL for {domain}...", "info")
-        stdin, stdout, stderr = ssh.exec_command(f"certbot --nginx -d {domain} --non-interactive --agree-tos --email admin@{domain} --redirect 2>&1")
-        output = stdout.read().decode()
-        error = stderr.read().decode()
+        
+        if web_server == "apache":
+            # ============ APACHE SSL ============
+            # Run certbot for Apache
+            stdin, stdout, stderr = ssh.exec_command(f"certbot --apache -d {domain} --non-interactive --agree-tos --email admin@{domain} --redirect 2>&1")
+            output = stdout.read().decode()
+            error = stderr.read().decode()
+            
+            # If certbot succeeded, update the SSL config to include proper proxy settings
+            if "Congratulations" in output or "Successfully" in output or "Certificate not yet due for renewal" in output:
+                sftp = ssh.open_sftp()
+                
+                # Create/update SSL config with full proxy settings
+                if deploy_type == "fullstack":
+                    ssl_config = f"""<IfModule mod_ssl.c>
+<VirtualHost *:443>
+    ServerName {domain}
+
+    # Security Headers
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    ProxyPreserveHost On
+    ProxyRequests Off
+
+    # Backend API (must come before /)
+    ProxyPass /api http://127.0.0.1:{backend_port}/api
+    ProxyPassReverse /api http://127.0.0.1:{backend_port}/api
+
+    # Frontend
+    ProxyPass / http://127.0.0.1:{port}/
+    ProxyPassReverse / http://127.0.0.1:{port}/
+
+    SSLCertificateFile /etc/letsencrypt/live/{domain}/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/{domain}/privkey.pem
+    Include /etc/letsencrypt/options-ssl-apache.conf
+</VirtualHost>
+</IfModule>
+"""
+                else:
+                    ssl_config = f"""<IfModule mod_ssl.c>
+<VirtualHost *:443>
+    ServerName {domain}
+
+    # Security Headers
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+
+    ProxyPreserveHost On
+    ProxyRequests Off
+
+    ProxyPass / http://127.0.0.1:{port}/
+    ProxyPassReverse / http://127.0.0.1:{port}/
+
+    SSLCertificateFile /etc/letsencrypt/live/{domain}/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/{domain}/privkey.pem
+    Include /etc/letsencrypt/options-ssl-apache.conf
+</VirtualHost>
+</IfModule>
+"""
+                
+                ssl_path = f"/etc/apache2/sites-available/{domain}-le-ssl.conf"
+                with sftp.file(ssl_path, "w") as f:
+                    f.write(ssl_config)
+                sftp.close()
+                
+                # Enable modules and reload
+                ssh.exec_command("a2enmod ssl headers proxy proxy_http 2>/dev/null")
+                ssh.exec_command(f"a2ensite {domain}-le-ssl.conf 2>/dev/null")
+                ssh.exec_command("apache2ctl configtest && systemctl reload apache2")
+                
+                await add_deployment_log(deployment_id, f"SSL/HTTPS configured successfully for {domain}", "success")
+                ssh.close()
+                return {"message": "SSL configured successfully", "domain": domain, "https_url": f"https://{domain}"}
+        else:
+            # ============ NGINX SSL ============
+            stdin, stdout, stderr = ssh.exec_command(f"certbot --nginx -d {domain} --non-interactive --agree-tos --email admin@{domain} --redirect 2>&1")
+            output = stdout.read().decode()
+            error = stderr.read().decode()
+            
+            if "Congratulations" in output or "Successfully" in output or "Certificate not yet due for renewal" in output:
+                await add_deployment_log(deployment_id, f"SSL/HTTPS configured successfully for {domain}", "success")
+                ssh.close()
+                return {"message": "SSL configured successfully", "domain": domain, "https_url": f"https://{domain}"}
         
         ssh.close()
         
-        if "Congratulations" in output or "Successfully" in output:
-            await add_deployment_log(deployment_id, f"SSL/HTTPS configured successfully for {domain}", "success")
-            return {"message": "SSL configured successfully", "domain": domain, "https_url": f"https://{domain}"}
-        else:
-            await add_deployment_log(deployment_id, f"SSL configuration output: {output}", "warning")
-            return {"message": "SSL configuration attempted", "output": output, "error": error}
+        await add_deployment_log(deployment_id, f"SSL configuration output: {output}", "warning")
+        return {"message": "SSL configuration attempted", "output": output, "error": error}
             
     except Exception as e:
         await add_deployment_log(deployment_id, f"SSL configuration failed: {str(e)}", "error")
