@@ -916,6 +916,10 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
             
             ssh.exec_command(f"docker volume create {mongodb_volume}")
             
+            # Stop existing MongoDB if exists (for redeploy)
+            ssh.exec_command(f"docker stop {mongodb_container} 2>/dev/null; docker rm {mongodb_container} 2>/dev/null")
+            await asyncio.sleep(1)
+            
             # Run MongoDB in the shared network so containers can communicate via hostname
             mongo_cmd = f"docker run -d --name {mongodb_container} --network {network_name} -p {mongodb_port_used}:27017 -v {mongodb_volume}:/data/db --restart unless-stopped mongo:6"
             stdin, stdout, stderr = ssh.exec_command(mongo_cmd)
