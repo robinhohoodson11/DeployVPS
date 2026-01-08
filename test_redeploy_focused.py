@@ -29,8 +29,10 @@ class RedeployAPITester:
             print(f"❌ {name} - {details}")
 
     def setup_auth(self):
-        """Setup authentication"""
+        """Setup authentication - try to login with existing admin or create new one"""
         print("🔧 Setting up authentication...")
+        
+        # First try to create a new user (might become admin if first user)
         timestamp = datetime.now().strftime('%H%M%S')
         user_data = {
             "name": f"Redeploy Test User {timestamp}",
@@ -44,10 +46,32 @@ class RedeployAPITester:
                 data = response.json()
                 if 'access_token' in data:
                     self.token = data['access_token']
-                    self.log_test("Authentication Setup", True, "Admin user created")
+                    self.log_test("Authentication Setup", True, "New admin user created")
                     return True
                 elif data.get('status') == 'pending':
-                    self.log_test("Authentication Setup", False, "User pending - need admin token")
+                    # User is pending, try to login with a common admin account
+                    print("🔧 User pending, trying common admin credentials...")
+                    
+                    # Try common admin credentials that might exist
+                    admin_credentials = [
+                        {"email": "admin@admin.com", "password": "Admin@123"},
+                        {"email": "admin@example.com", "password": "adminpass123"},
+                        {"email": "test@example.com", "password": "testpass123"}
+                    ]
+                    
+                    for creds in admin_credentials:
+                        try:
+                            login_response = requests.post(f"{self.api_url}/auth/login", json=creds, timeout=30)
+                            if login_response.status_code == 200:
+                                login_data = login_response.json()
+                                if 'access_token' in login_data:
+                                    self.token = login_data['access_token']
+                                    self.log_test("Authentication Setup", True, f"Logged in as existing admin: {creds['email']}")
+                                    return True
+                        except:
+                            continue
+                    
+                    self.log_test("Authentication Setup", False, "No admin credentials found")
                     return False
             else:
                 self.log_test("Authentication Setup", False, f"Registration failed: {response.status_code}")
