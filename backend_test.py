@@ -216,8 +216,24 @@ class DeployVPSAPITester:
         # Test deployment logs
         self.run_test("Get Deployment Logs", "GET", f"deployments/{deployment_id}/logs", 200)
         
-        # Test redeploy
-        self.run_test("Redeploy", "POST", f"deployments/{deployment_id}/redeploy", 200)
+        # Test redeploy with detailed verification
+        redeploy_response = self.run_test("Redeploy", "POST", f"deployments/{deployment_id}/redeploy", 200)
+        if redeploy_response:
+            # Verify redeploy response contains expected fields
+            expected_fields = ['id', 'status', 'deploy_type', 'vps_id', 'repo_url', 'project_name', 'port']
+            missing_fields = [field for field in expected_fields if field not in redeploy_response]
+            if not missing_fields:
+                self.log_test("Redeploy Response Fields", True, f"All expected fields present")
+            else:
+                self.log_test("Redeploy Response Fields", False, f"Missing fields: {missing_fields}")
+            
+            # Verify status is set to pending (indicating redeploy started)
+            if redeploy_response.get('status') == 'pending':
+                self.log_test("Redeploy Status", True, "Status correctly set to pending")
+            else:
+                self.log_test("Redeploy Status", False, f"Expected 'pending', got '{redeploy_response.get('status')}'")
+        
+        return deployment_id
         
         # Test stop deployment
         self.run_test("Stop Deployment", "POST", f"deployments/{deployment_id}/stop", 200)
