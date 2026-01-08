@@ -211,6 +211,21 @@ backend:
         agent: "testing"
         comment: "✅ GET /api/admin/settings/email e POST /api/admin/settings/email estão implementadas e protegidas. Retornam 403 para usuários não autenticados. Configuração de email com criptografia implementada nas linhas 566-604."
 
+  - task: "Redeploy API with Database Preservation"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "API de redeploy implementada com preservação do banco MongoDB"
+      - working: true
+        agent: "testing"
+        comment: "✅ POST /api/deployments/{deployment_id}/redeploy funciona corretamente. Endpoint existe e retorna 200 OK com estrutura de resposta válida contendo todos os campos esperados (id, status, deploy_type, etc). Parâmetro is_redeploy=True passado corretamente na linha 1368. Lógica de preservação do MongoDB implementada nas linhas 922-964. Admin não é recriado em redeploy (linhas 1123, 1254). Autenticação funciona (403 sem token, 404 para ID inválido)."
+
 frontend:
   - task: "Admin Creation Form"
     implemented: true
