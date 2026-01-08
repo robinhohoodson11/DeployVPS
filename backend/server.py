@@ -909,43 +909,86 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict, is_red
         mongodb_port_used = deployment.get("mongodb_port", 27017)
         mongodb_container = f"mongodb_{project_name}"
         network_name = f"network_{project_name}"
+        mongodb_volume = f"mongodb_data_{project_name}"
         
         # Create Docker network BEFORE creating containers
         ssh.exec_command(f"docker network create {network_name} 2>/dev/null || true")
         
         if deployment.get("create_mongodb"):
-            mongodb_volume = f"mongodb_data_{project_name}"
+            # Internal MongoDB URL for container communication
+            mongodb_url_internal = f"mongodb://{mongodb_container}:27017/{project_name}"
+            mongodb_url_external = f"mongodb://localhost:{mongodb_port_used}/{project_name}"
             
-            await add_deployment_log(deployment_id, f"Setting up MongoDB container on port {mongodb_port_used}...")
-            
-            ssh.exec_command(f"docker stop {mongodb_container} 2>/dev/null; docker rm {mongodb_container} 2>/dev/null")
-            await asyncio.sleep(1)
-            
-            ssh.exec_command(f"docker volume create {mongodb_volume}")
-            
-            # Stop existing MongoDB if exists (for redeploy)
-            ssh.exec_command(f"docker stop {mongodb_container} 2>/dev/null; docker rm {mongodb_container} 2>/dev/null")
-            await asyncio.sleep(1)
-            
-            # Run MongoDB in the shared network so containers can communicate via hostname
-            mongo_cmd = f"docker run -d --name {mongodb_container} --network {network_name} -p {mongodb_port_used}:27017 -v {mongodb_volume}:/data/db --restart unless-stopped mongo:6"
-            stdin, stdout, stderr = ssh.exec_command(mongo_cmd)
-            mongo_output = stdout.read().decode()
-            
-            if stdout.channel.recv_exit_status() == 0:
-                # Use container name for internal communication (works within Docker network)
-                mongodb_url_internal = f"mongodb://{mongodb_container}:27017/{project_name}"
-                mongodb_url_external = f"mongodb://localhost:{mongodb_port_used}/{project_name}"
-                env_string += f" -e MONGO_URL='{mongodb_url_internal}'"
-                env_string += f" -e MONGODB_URL='{mongodb_url_internal}'"
-                env_string += f" -e DATABASE_URL='{mongodb_url_internal}'"
-                env_string += f" -e DB_NAME='{project_name}'"
-                await add_deployment_log(deployment_id, f"MongoDB running on port {mongodb_port_used}", "success")
-                await add_deployment_log(deployment_id, f"Internal URL: {mongodb_url_internal}", "info")
-                await db.deployments.update_one({"id": deployment_id}, {"$set": {"mongodb_url": mongodb_url_external}})
-                await asyncio.sleep(3)  # Wait for MongoDB to be ready
+            if is_redeploy:
+                # ========== REDEPLOY: Preserve existing MongoDB ==========
+                await add_deployment_log(deployment_id, f"🗄️ Checking existing MongoDB container...")
+                
+                # Check if MongoDB container is running
+                stdin, stdout, stderr = ssh.exec_command(f"docker ps --filter name={mongodb_container} --format '{{{{.Names}}}}'")
+                running_containers = stdout.read().decode().strip()
+                
+                if mongodb_container in running_containers:
+                    await add_deployment_log(deployment_id, f"✅ MongoDB container found and running - preserving data", "success")
+                    # Ensure container is connected to the network
+                    ssh.exec_command(f"docker network connect {network_name} {mongodb_container} 2>/dev/null || true")
+                else:
+                    # Check if container exists but is stopped
+                    stdin, stdout, stderr = ssh.exec_command(f"docker ps -a --filter name={mongodb_container} --format '{{{{.Names}}}}'")
+                    all_containers = stdout.read().decode().strip()
+                    
+                    if mongodb_container in all_containers:
+                        await add_deployment_log(deployment_id, f"🔄 Restarting stopped MongoDB container (data preserved)...")
+                        ssh.exec_command(f"docker start {mongodb_container}")
+                        ssh.exec_command(f"docker network connect {network_name} {mongodb_container} 2>/dev/null || true")
+                        await asyncio.sleep(3)
+                        await add_deployment_log(deployment_id, f"✅ MongoDB container restarted - data intact", "success")
+                    else:
+                        # Container doesn't exist, check if volume exists
+                        stdin, stdout, stderr = ssh.exec_command(f"docker volume ls --filter name={mongodb_volume} --format '{{{{.Name}}}}'")
+                        existing_volume = stdout.read().decode().strip()
+                        
+                        if mongodb_volume in existing_volume:
+                            await add_deployment_log(deployment_id, f"🔄 Recreating MongoDB container with existing data volume...")
+                            mongo_cmd = f"docker run -d --name {mongodb_container} --network {network_name} -p {mongodb_port_used}:27017 -v {mongodb_volume}:/data/db --restart unless-stopped mongo:6"
+                            stdin, stdout, stderr = ssh.exec_command(mongo_cmd)
+                            if stdout.channel.recv_exit_status() == 0:
+                                await add_deployment_log(deployment_id, f"✅ MongoDB container recreated - data restored from volume", "success")
+                            else:
+                                await add_deployment_log(deployment_id, f"⚠️ Failed to recreate MongoDB: {stderr.read().decode()}", "warning")
+                        else:
+                            await add_deployment_log(deployment_id, f"⚠️ No existing MongoDB data found - creating new instance", "warning")
+                            ssh.exec_command(f"docker volume create {mongodb_volume}")
+                            mongo_cmd = f"docker run -d --name {mongodb_container} --network {network_name} -p {mongodb_port_used}:27017 -v {mongodb_volume}:/data/db --restart unless-stopped mongo:6"
+                            ssh.exec_command(mongo_cmd)
+                
+                await asyncio.sleep(2)
             else:
-                await add_deployment_log(deployment_id, f"Warning: Failed to start MongoDB - {stderr.read().decode()}", "warning")
+                # ========== NEW DEPLOY: Create fresh MongoDB ==========
+                await add_deployment_log(deployment_id, f"Setting up MongoDB container on port {mongodb_port_used}...")
+                
+                ssh.exec_command(f"docker stop {mongodb_container} 2>/dev/null; docker rm {mongodb_container} 2>/dev/null")
+                await asyncio.sleep(1)
+                
+                ssh.exec_command(f"docker volume create {mongodb_volume}")
+                
+                # Run MongoDB in the shared network so containers can communicate via hostname
+                mongo_cmd = f"docker run -d --name {mongodb_container} --network {network_name} -p {mongodb_port_used}:27017 -v {mongodb_volume}:/data/db --restart unless-stopped mongo:6"
+                stdin, stdout, stderr = ssh.exec_command(mongo_cmd)
+                mongo_output = stdout.read().decode()
+                
+                if stdout.channel.recv_exit_status() == 0:
+                    await add_deployment_log(deployment_id, f"MongoDB running on port {mongodb_port_used}", "success")
+                    await add_deployment_log(deployment_id, f"Internal URL: {mongodb_url_internal}", "info")
+                    await asyncio.sleep(3)  # Wait for MongoDB to be ready
+                else:
+                    await add_deployment_log(deployment_id, f"Warning: Failed to start MongoDB - {stderr.read().decode()}", "warning")
+            
+            # Set environment variables for MongoDB connection (both new deploy and redeploy)
+            env_string += f" -e MONGO_URL='{mongodb_url_internal}'"
+            env_string += f" -e MONGODB_URL='{mongodb_url_internal}'"
+            env_string += f" -e DATABASE_URL='{mongodb_url_internal}'"
+            env_string += f" -e DB_NAME='{project_name}'"
+            await db.deployments.update_one({"id": deployment_id}, {"$set": {"mongodb_url": mongodb_url_external}})
         
         # ============ FULLSTACK DEPLOYMENT ============
         if is_fullstack:
