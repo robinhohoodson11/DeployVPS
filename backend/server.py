@@ -1739,13 +1739,24 @@ async def remove_domain(deployment_id: str, user: dict = Depends(get_current_use
         try:
             ssh = get_ssh_client(vps)
             project_name = deployment["project_name"]
-            ssh.exec_command(f"rm -f /etc/nginx/sites-enabled/{project_name} /etc/nginx/sites-available/{project_name}")
-            ssh.exec_command("systemctl reload nginx")
+            domain = deployment["domain"]
+            web_server = deployment.get("web_server", "nginx")
+            
+            if web_server == "apache":
+                # Remove Apache configs
+                ssh.exec_command(f"a2dissite {domain}.conf {domain}-le-ssl.conf 2>/dev/null")
+                ssh.exec_command(f"rm -f /etc/apache2/sites-available/{domain}.conf /etc/apache2/sites-available/{domain}-le-ssl.conf")
+                ssh.exec_command("systemctl reload apache2")
+            else:
+                # Remove Nginx configs
+                ssh.exec_command(f"rm -f /etc/nginx/sites-enabled/{project_name} /etc/nginx/sites-available/{project_name}")
+                ssh.exec_command("systemctl reload nginx")
+            
             ssh.close()
         except:
             pass
     
-    await db.deployments.update_one({"id": deployment_id}, {"$set": {"domain": None}})
+    await db.deployments.update_one({"id": deployment_id}, {"$set": {"domain": None, "web_server": None}})
     return {"message": "Domain removed"}
 
 # ============ LIVE LOGS ============
