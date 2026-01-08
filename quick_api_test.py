@@ -4,7 +4,7 @@ from datetime import datetime
 
 def test_deployment_api():
     """Quick test of deployment API with new fields"""
-    base_url = "https://github-deploy-auth.preview.emergentagent.com"
+    base_url = "https://deploy-genius-5.preview.emergentagent.com"
     api_url = f"{base_url}/api"
     
     print("🔍 Testing DeployVPS API - New Deployment Features")
