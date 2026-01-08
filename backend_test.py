@@ -445,6 +445,8 @@ class DeployVPSAPITester:
         self.token = original_token
         
         return deployment_id
+
+    def test_domain_configuration(self, deployment_id):
         """Test domain configuration"""
         print("\n🔍 Testing Domain Configuration...")
         if not self.token or not deployment_id:
@@ -457,6 +459,8 @@ class DeployVPSAPITester:
         
         # Test remove domain
         self.run_test("Remove Domain", "DELETE", f"deployments/{deployment_id}/domain", 200)
+        
+        return True
         
         return True
 
