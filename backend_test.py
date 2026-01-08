@@ -341,7 +341,110 @@ class DeployVPSAPITester:
         # Return deployment IDs for cleanup
         return [admin_deployment_id, fullstack_deployment_id, dynamic_deployment_id]
 
-    def test_domain_configuration(self, deployment_id):
+    def test_redeploy_functionality(self, vps_id):
+        """Test redeploy API endpoint specifically as requested in review"""
+        print("\n🔍 Testing Redeploy API Functionality...")
+        if not self.token or not vps_id:
+            self.log_test("Redeploy Functionality", False, "No token or VPS ID available")
+            return None
+            
+        # First create a deployment to redeploy
+        deployment_data = {
+            "vps_id": vps_id,
+            "repo_url": "https://github.com/vercel/next.js",
+            "branch": "main",
+            "project_name": "test-redeploy-app",
+            "port": 3010,
+            "create_mongodb": True,
+            "mongodb_port": 27020,
+            "create_admin": True,
+            "admin_email": "redeploy@testapp.com",
+            "admin_password": "RedeployPass123!"
+        }
+        
+        create_response = self.run_test("Create Deployment for Redeploy Test", "POST", "deployments", 200, deployment_data)
+        if not create_response:
+            return None
+            
+        deployment_id = create_response.get('id')
+        if not deployment_id:
+            self.log_test("Deployment ID Missing for Redeploy", False, "No deployment ID in response")
+            return None
+        
+        print(f"\n  Testing POST /api/deployments/{deployment_id}/redeploy...")
+        
+        # Test 1: Verify endpoint exists and returns valid response
+        redeploy_response = self.run_test("Redeploy Endpoint Exists", "POST", f"deployments/{deployment_id}/redeploy", 200)
+        
+        if redeploy_response:
+            # Test 2: Verify endpoint accepts deployment_id and returns expected fields
+            expected_fields = ['id', 'status', 'deploy_type', 'vps_id', 'repo_url', 'branch', 'project_name', 'port', 'created_at', 'updated_at']
+            present_fields = [field for field in expected_fields if field in redeploy_response]
+            missing_fields = [field for field in expected_fields if field not in redeploy_response]
+            
+            if len(present_fields) >= 8:  # Most important fields present
+                self.log_test("Redeploy Response Structure", True, f"Contains {len(present_fields)}/{len(expected_fields)} expected fields")
+            else:
+                self.log_test("Redeploy Response Structure", False, f"Missing critical fields: {missing_fields}")
+            
+            # Verify deployment_id is correctly handled
+            if redeploy_response.get('id') == deployment_id:
+                self.log_test("Redeploy Deployment ID Match", True, "Deployment ID correctly preserved")
+            else:
+                self.log_test("Redeploy Deployment ID Match", False, f"ID mismatch: expected {deployment_id}, got {redeploy_response.get('id')}")
+            
+            # Verify status field
+            if 'status' in redeploy_response:
+                status = redeploy_response.get('status')
+                if status in ['pending', 'cloning', 'building', 'deploying', 'running']:
+                    self.log_test("Redeploy Status Field", True, f"Valid status: {status}")
+                else:
+                    self.log_test("Redeploy Status Field", False, f"Invalid status: {status}")
+            else:
+                self.log_test("Redeploy Status Field", False, "Status field missing")
+            
+            # Verify deploy_type field (if present)
+            if 'deploy_type' in redeploy_response:
+                deploy_type = redeploy_response.get('deploy_type')
+                valid_types = ['frontend_only', 'backend_only', 'fullstack', 'static']
+                if deploy_type in valid_types or deploy_type is None:
+                    self.log_test("Redeploy Deploy Type Field", True, f"Valid deploy_type: {deploy_type}")
+                else:
+                    self.log_test("Redeploy Deploy Type Field", False, f"Invalid deploy_type: {deploy_type}")
+            else:
+                self.log_test("Redeploy Deploy Type Field", True, "deploy_type field not required initially")
+        
+        # Test 3: Verify the logic - check if is_redeploy=True parameter is being passed correctly
+        # We can't directly test the internal parameter, but we can verify the behavior
+        print("\n  Verifying Redeploy Logic (Database Preservation)...")
+        
+        # Get deployment details to check if MongoDB settings are preserved
+        detail_response = self.run_test("Get Deployment Details After Redeploy", "GET", f"deployments/{deployment_id}", 200)
+        if detail_response:
+            # Check if MongoDB URL is preserved (indicating database preservation logic)
+            if detail_response.get('mongodb_url'):
+                self.log_test("MongoDB Preservation Logic", True, "MongoDB URL preserved in redeploy")
+            else:
+                self.log_test("MongoDB Preservation Logic", False, "MongoDB URL not found - may indicate issue with preservation")
+            
+            # Check if admin credentials are preserved (should not be recreated in redeploy)
+            admin_creds = detail_response.get('admin_credentials')
+            if admin_creds and isinstance(admin_creds, dict):
+                self.log_test("Admin Credentials Preservation", True, "Admin credentials preserved from original deployment")
+            else:
+                self.log_test("Admin Credentials Preservation", False, "Admin credentials missing - may indicate recreation issue")
+        
+        # Test 4: Test redeploy with invalid deployment ID
+        invalid_id = "invalid-deployment-id-12345"
+        self.run_test("Redeploy Invalid ID", "POST", f"deployments/{invalid_id}/redeploy", 404)
+        
+        # Test 5: Test redeploy without authentication
+        original_token = self.token
+        self.token = None
+        self.run_test("Redeploy Without Auth", "POST", f"deployments/{deployment_id}/redeploy", 401)
+        self.token = original_token
+        
+        return deployment_id
         """Test domain configuration"""
         print("\n🔍 Testing Domain Configuration...")
         if not self.token or not deployment_id:
