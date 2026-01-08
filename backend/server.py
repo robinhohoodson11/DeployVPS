@@ -1457,10 +1457,98 @@ async def configure_domain(deployment_id: str, config: DomainConfig, user: dict 
     
     domain = config.domain
     port = deployment["port"]
+    backend_port = deployment.get("backend_port", port + 1000)
     project_name = deployment["project_name"]
+    deploy_type = deployment.get("deploy_type", "static")
     
-    # Nginx config for reverse proxy
-    nginx_config = f"""server {{
+    try:
+        ssh = get_ssh_client(vps)
+        
+        # Detect web server (Apache or Nginx)
+        stdin, stdout, stderr = ssh.exec_command("which apache2 apachectl 2>/dev/null | head -1")
+        has_apache = bool(stdout.read().decode().strip())
+        
+        stdin, stdout, stderr = ssh.exec_command("which nginx 2>/dev/null")
+        has_nginx = bool(stdout.read().decode().strip())
+        
+        # Check which one is actually running/listening on port 80
+        stdin, stdout, stderr = ssh.exec_command("netstat -tlnp 2>/dev/null | grep ':80' | head -1")
+        port_80_info = stdout.read().decode()
+        
+        use_apache = "apache" in port_80_info.lower() or (has_apache and not has_nginx)
+        web_server = "apache" if use_apache else "nginx"
+        
+        await add_deployment_log(deployment_id, f"Detected web server: {web_server.upper()}", "info")
+        
+        sftp = ssh.open_sftp()
+        
+        if use_apache:
+            # ============ APACHE CONFIGURATION ============
+            if deploy_type == "fullstack":
+                apache_config = f"""<VirtualHost *:80>
+    ServerName {domain}
+    
+    # Redirect to HTTPS
+    RewriteEngine On
+    RewriteCond %{{HTTPS}} off
+    RewriteRule ^(.*)$ https://%{{HTTP_HOST}}%{{REQUEST_URI}} [L,R=301]
+</VirtualHost>
+"""
+            else:
+                apache_config = f"""<VirtualHost *:80>
+    ServerName {domain}
+    
+    ProxyPreserveHost On
+    ProxyRequests Off
+    
+    ProxyPass / http://127.0.0.1:{port}/
+    ProxyPassReverse / http://127.0.0.1:{port}/
+</VirtualHost>
+"""
+            
+            apache_path = f"/etc/apache2/sites-available/{domain}.conf"
+            with sftp.file(apache_path, "w") as f:
+                f.write(apache_config)
+            
+            # Enable required modules and site
+            ssh.exec_command("a2enmod proxy proxy_http rewrite headers 2>/dev/null")
+            ssh.exec_command(f"a2ensite {domain}.conf 2>/dev/null")
+            ssh.exec_command("apache2ctl configtest && systemctl reload apache2")
+            
+        else:
+            # ============ NGINX CONFIGURATION ============
+            if deploy_type == "fullstack":
+                nginx_config = f"""server {{
+    listen 80;
+    server_name {domain};
+    
+    location /api {{
+        proxy_pass http://localhost:{backend_port}/api;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }}
+    
+    location / {{
+        proxy_pass http://localhost:{port};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }}
+}}
+"""
+            else:
+                nginx_config = f"""server {{
     listen 80;
     server_name {domain};
     
@@ -1477,29 +1565,24 @@ async def configure_domain(deployment_id: str, config: DomainConfig, user: dict 
     }}
 }}
 """
-    
-    try:
-        ssh = get_ssh_client(vps)
+            
+            nginx_path = f"/etc/nginx/sites-available/{project_name}"
+            with sftp.file(nginx_path, "w") as f:
+                f.write(nginx_config)
+            
+            ssh.exec_command(f"ln -sf {nginx_path} /etc/nginx/sites-enabled/{project_name}")
+            ssh.exec_command("nginx -t && systemctl reload nginx")
         
-        # Write nginx config
-        sftp = ssh.open_sftp()
-        nginx_path = f"/etc/nginx/sites-available/{project_name}"
-        with sftp.file(nginx_path, "w") as f:
-            f.write(nginx_config)
         sftp.close()
-        
-        # Enable site and reload nginx
-        ssh.exec_command(f"ln -sf {nginx_path} /etc/nginx/sites-enabled/{project_name}")
-        ssh.exec_command("nginx -t && systemctl reload nginx")
-        
         ssh.close()
         
-        await db.deployments.update_one({"id": deployment_id}, {"$set": {"domain": domain}})
+        await db.deployments.update_one({"id": deployment_id}, {"$set": {"domain": domain, "web_server": web_server}})
         await add_deployment_log(deployment_id, f"Domain {domain} configured successfully", "success")
         
         return {
             "message": "Domain configured",
             "domain": domain,
+            "web_server": web_server,
             "vps_host": vps["host"]
         }
     except Exception as e:
