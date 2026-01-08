@@ -1250,15 +1250,18 @@ CMD ["nginx", "-g", "daemon off;"]
                 error = stderr.read().decode()
                 raise Exception(f"Failed to start container: {error}")
             
-            # Create admin user if requested and MongoDB is available
-            if deployment.get("create_admin") and deployment.get("create_mongodb"):
+            # Create admin user if requested and MongoDB is available (only on new deploy, not redeploy)
+            if not is_redeploy and deployment.get("create_admin") and deployment.get("create_mongodb"):
                 await asyncio.sleep(2)
                 admin_email = deployment.get("admin_email", "admin@admin.com")
                 admin_password = deployment.get("admin_password", "Admin@123")
                 await create_admin_user(ssh, mongodb_port_used, admin_email, admin_password, deployment_id, project_name)
             
             await update_deployment_status(deployment_id, DeployStatus.RUNNING, container_id=container_id)
-            await add_deployment_log(deployment_id, f"Deployment successful! Container ID: {container_id}", "success")
+            if is_redeploy:
+                await add_deployment_log(deployment_id, f"Redeploy successful! Container ID: {container_id} (Database preserved)", "success")
+            else:
+                await add_deployment_log(deployment_id, f"Deployment successful! Container ID: {container_id}", "success")
             await add_deployment_log(deployment_id, f"Application running on http://{vps['host']}:{port}", "success")
         
         ssh.close()
