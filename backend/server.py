@@ -1119,15 +1119,18 @@ CMD ["nginx", "-g", "daemon off;"]
             ssh.exec_command(f"sudo ufw allow {port}/tcp 2>/dev/null || true")
             ssh.exec_command(f"sudo ufw allow {backend_port}/tcp 2>/dev/null || true")
             
-            # Create admin user if requested and MongoDB is available
-            if deployment.get("create_admin") and deployment.get("create_mongodb"):
+            # Create admin user if requested and MongoDB is available (only on new deploy, not redeploy)
+            if not is_redeploy and deployment.get("create_admin") and deployment.get("create_mongodb"):
                 await asyncio.sleep(2)  # Wait for services to be ready
                 admin_email = deployment.get("admin_email", "admin@admin.com")
                 admin_password = deployment.get("admin_password", "Admin@123")
                 await create_admin_user(ssh, mongodb_port_used, admin_email, admin_password, deployment_id, project_name)
             
             await update_deployment_status(deployment_id, DeployStatus.RUNNING, container_id=container_id)
-            await add_deployment_log(deployment_id, f"🎉 FULLSTACK deployment successful!", "success")
+            if is_redeploy:
+                await add_deployment_log(deployment_id, f"🎉 FULLSTACK REDEPLOY successful! (Database preserved)", "success")
+            else:
+                await add_deployment_log(deployment_id, f"🎉 FULLSTACK deployment successful!", "success")
             await add_deployment_log(deployment_id, f"🌐 Frontend: http://{vps_host}:{port}", "success")
             await add_deployment_log(deployment_id, f"⚙️ Backend API: http://{vps_host}:{backend_port}/api", "success")
             
