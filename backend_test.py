@@ -648,6 +648,8 @@ class DeployVPSAPITester:
         all_deployment_ids = [deployment_id] if deployment_id else []
         if new_deployment_ids:
             all_deployment_ids.extend([d for d in new_deployment_ids if d])
+        if redeploy_deployment_id:
+            all_deployment_ids.append(redeploy_deployment_id)
         
         self.test_cleanup(vps_id, all_deployment_ids)
         
