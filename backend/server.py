@@ -1345,6 +1345,10 @@ async def get_deployment(deployment_id: str, user: dict = Depends(get_current_us
 
 @api_router.post("/deployments/{deployment_id}/redeploy", response_model=DeploymentResponse)
 async def redeploy(deployment_id: str, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
+    """
+    Redeploy an existing deployment.
+    This preserves the MongoDB database and only rebuilds frontend/backend containers.
+    """
     deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
@@ -1354,7 +1358,8 @@ async def redeploy(deployment_id: str, background_tasks: BackgroundTasks, user: 
         raise HTTPException(status_code=404, detail="VPS not found")
     
     await db.deployments.update_one({"id": deployment_id}, {"$set": {"status": DeployStatus.PENDING, "logs": []}})
-    background_tasks.add_task(run_deployment, deployment_id, vps, deployment)
+    # Pass is_redeploy=True to preserve MongoDB data
+    background_tasks.add_task(run_deployment, deployment_id, vps, deployment, is_redeploy=True)
     
     deployment["status"] = DeployStatus.PENDING
     deployment["logs"] = []
