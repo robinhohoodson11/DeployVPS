@@ -823,10 +823,17 @@ print("Admin user created successfully!");
         await add_deployment_log(deployment_id, f"Warning: Admin creation failed - {str(e)}", "warning")
         return False
 
-async def run_deployment(deployment_id: str, vps: dict, deployment: dict):
+async def run_deployment(deployment_id: str, vps: dict, deployment: dict, is_redeploy: bool = False):
+    """
+    Run deployment process. 
+    If is_redeploy=True, preserves MongoDB data and only rebuilds frontend/backend.
+    """
     try:
         await update_deployment_status(deployment_id, DeployStatus.CLONING)
-        await add_deployment_log(deployment_id, "Starting deployment...")
+        if is_redeploy:
+            await add_deployment_log(deployment_id, "🔄 Starting REDEPLOY (preserving database)...")
+        else:
+            await add_deployment_log(deployment_id, "Starting deployment...")
         
         ssh = get_ssh_client(vps)
         project_name = deployment["project_name"]
