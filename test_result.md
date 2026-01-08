@@ -259,10 +259,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "User Registration with Pending Approval"
-    - "Pending User Login Blocked"
-    - "Admin Routes Access Control"
-    - "Email Configuration Routes"
+    - "Redeploy API with Database Preservation"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
