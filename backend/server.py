@@ -1103,9 +1103,11 @@ CMD ["nginx", "-g", "daemon off;"]
             if stdout.channel.recv_exit_status() != 0:
                 raise Exception("Frontend build failed")
             
-            # Stop existing frontend
-            ssh.exec_command(f"docker stop {frontend_container} 2>/dev/null; docker rm {frontend_container} 2>/dev/null")
-            await asyncio.sleep(1)
+            # Stop and remove existing frontend container (wait for completion)
+            await add_deployment_log(deployment_id, "Stopping existing frontend container...", "info")
+            stdin, stdout, stderr = ssh.exec_command(f"docker stop {frontend_container} 2>/dev/null; docker rm -f {frontend_container} 2>/dev/null; echo 'done'")
+            stdout.channel.recv_exit_status()  # Wait for command to complete
+            await asyncio.sleep(2)
             
             # Run frontend container
             run_frontend = f"docker run -d --name {frontend_container} --network {network_name} -p {port}:80 --restart unless-stopped {frontend_container}:latest"
