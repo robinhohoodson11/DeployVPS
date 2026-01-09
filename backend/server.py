@@ -1240,9 +1240,11 @@ CMD ["nginx", "-g", "daemon off;"]
             is_static = not has_dockerfile and not is_node and not is_python and not has_frontend and not has_backend
             internal_port = 80 if (is_static or has_frontend) else port
             
-            # Stop existing container if exists (for redeploy)
-            ssh.exec_command(f"docker stop {container_name} 2>/dev/null; docker rm {container_name} 2>/dev/null")
-            await asyncio.sleep(1)
+            # Stop and remove existing container (wait for completion)
+            await add_deployment_log(deployment_id, "Stopping existing container...", "info")
+            stdin, stdout, stderr = ssh.exec_command(f"docker stop {container_name} 2>/dev/null; docker rm -f {container_name} 2>/dev/null; echo 'done'")
+            stdout.channel.recv_exit_status()  # Wait for command to complete
+            await asyncio.sleep(2)
             
             # Run container
             await add_deployment_log(deployment_id, f"Starting container on port {port}...")
