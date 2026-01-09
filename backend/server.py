@@ -1041,9 +1041,11 @@ CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "{b
             if stdout.channel.recv_exit_status() != 0:
                 raise Exception("Backend build failed")
             
-            # Stop existing backend
-            ssh.exec_command(f"docker stop {backend_container} 2>/dev/null; docker rm {backend_container} 2>/dev/null")
-            await asyncio.sleep(1)
+            # Stop and remove existing backend container (wait for completion)
+            await add_deployment_log(deployment_id, "Stopping existing backend container...", "info")
+            stdin, stdout, stderr = ssh.exec_command(f"docker stop {backend_container} 2>/dev/null; docker rm -f {backend_container} 2>/dev/null; echo 'done'")
+            stdout.channel.recv_exit_status()  # Wait for command to complete
+            await asyncio.sleep(2)
             
             # Run backend container
             backend_env = env_string + f" -e PORT={backend_port}"
