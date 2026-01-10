@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Toaster, toast } from "sonner";
+import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -101,6 +102,21 @@ function PrivateRoute({ children }) {
   return user ? children : <Navigate to="/login" />;
 }
 
+// Public route - redirects to dashboard if already logged in
+function PublicRoute({ children }) {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  
+  return user ? <Navigate to="/dashboard" /> : children;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -113,9 +129,13 @@ function App() {
           }}
         />
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          {/* Public routes */}
+          <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          
+          {/* Protected routes */}
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/deploy/new" element={<PrivateRoute><NewDeployment /></PrivateRoute>} />
           <Route path="/deploy/:id" element={<PrivateRoute><DeploymentDetails /></PrivateRoute>} />
           <Route path="/vps" element={<PrivateRoute><VPSManagement /></PrivateRoute>} />
