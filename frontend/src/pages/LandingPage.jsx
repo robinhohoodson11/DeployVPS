@@ -120,6 +120,91 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Emergent Compatibility Banner */}
+      <section className="py-16 px-6 bg-gradient-to-r from-emerald-900/30 via-zinc-900 to-purple-900/30 border-y border-zinc-800">
+        <div className="container mx-auto">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8 max-w-5xl mx-auto">
+            <div className="flex-1 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm mb-4">
+                <Zap className="w-4 h-4" />
+                Integração Perfeita
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
+                Criou no Emergent? Faça deploy na sua própria VPS!
+              </h2>
+              <p className="text-zinc-400 text-lg">
+                Projetos criados no <span className="text-purple-400 font-semibold">Emergent.sh</span> são 100% compatíveis. 
+                Exporte seu repositório do GitHub e tenha controle total hospedando em sua própria infraestrutura.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <div className="bg-zinc-900/80 border border-zinc-700 rounded-xl p-6 backdrop-blur">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <Terminal className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-white font-semibold">Emergent</div>
+                    <div className="text-zinc-500 text-sm">Crie seu app com IA</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-zinc-400 mb-2">
+                  <ArrowRight className="w-4 h-4 text-emerald-500" />
+                  <span>Salve no GitHub</span>
+                </div>
+                <div className="flex items-center gap-2 text-zinc-400 mb-2">
+                  <ArrowRight className="w-4 h-4 text-emerald-500" />
+                  <span>Configure sua VPS</span>
+                </div>
+                <div className="flex items-center gap-2 text-emerald-400 font-medium">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Deploy automático!</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Compatibility Section */}
+      <section className="py-16 px-6">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+              Compatível com seus projetos favoritos
+            </h2>
+            <p className="text-zinc-400 text-lg">
+              Deploy automático para as principais tecnologias e plataformas
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-4xl mx-auto">
+            {[
+              { name: "Emergent", icon: "⚡", color: "from-purple-500 to-pink-500" },
+              { name: "React", icon: "⚛️", color: "from-cyan-500 to-blue-500" },
+              { name: "Next.js", icon: "▲", color: "from-zinc-600 to-zinc-800" },
+              { name: "Node.js", icon: "🟢", color: "from-green-600 to-green-800" },
+              { name: "Python", icon: "🐍", color: "from-yellow-500 to-blue-500" },
+              { name: "FastAPI", icon: "🚀", color: "from-teal-500 to-emerald-600" },
+              { name: "MongoDB", icon: "🍃", color: "from-green-500 to-green-700" },
+              { name: "Express", icon: "📦", color: "from-zinc-500 to-zinc-700" },
+              { name: "Vue.js", icon: "💚", color: "from-emerald-500 to-green-600" },
+              { name: "Django", icon: "🎸", color: "from-green-700 to-green-900" },
+              { name: "Flask", icon: "🧪", color: "from-zinc-600 to-zinc-800" },
+              { name: "Static", icon: "📄", color: "from-orange-500 to-red-500" },
+            ].map((tech, index) => (
+              <div key={index} className="group relative">
+                <div className={`absolute inset-0 bg-gradient-to-br ${tech.color} rounded-xl opacity-0 group-hover:opacity-20 transition-opacity`} />
+                <div className="relative bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 text-center hover:border-zinc-600 transition-colors">
+                  <div className="text-2xl mb-2">{tech.icon}</div>
+                  <div className="text-sm text-zinc-400 group-hover:text-zinc-200 transition-colors">{tech.name}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Stats Section */}
       <section className="py-12 border-y border-zinc-800 bg-zinc-900/30">
         <div className="container mx-auto px-6">
