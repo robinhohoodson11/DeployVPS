@@ -1279,23 +1279,115 @@ CMD ["nginx", "-g", "daemon off;"]
 
 # ============ DEPLOYMENT ROUTES ============
 
+@api_router.post("/deployments/check-ports")
+async def check_ports_availability(data: dict, user: dict = Depends(get_current_user)):
+    """Check if ports are available on the VPS before deployment"""
+    vps_id = data.get("vps_id")
+    port = data.get("port")
+    mongodb_port = data.get("mongodb_port", 27017)
+    create_mongodb = data.get("create_mongodb", False)
+    
+    vps = await db.vps.find_one({"id": vps_id, "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    conflicts = []
+    backend_port = port + 1000  # Fullstack backend port
+    
+    # Check database for existing deployments using these ports
+    ports_to_check = [port, backend_port]
+    if create_mongodb:
+        ports_to_check.append(mongodb_port)
+    
+    for p in ports_to_check:
+        existing = await db.deployments.find_one({
+            "vps_id": vps_id,
+            "$or": [
+                {"port": p},
+                {"backend_port": p},
+                {"mongodb_port": p}
+            ],
+            "status": {"$in": ["running", "pending", "cloning", "building", "deploying"]}
+        })
+        if existing:
+            port_type = "Frontend" if p == port else ("Backend" if p == backend_port else "MongoDB")
+            conflicts.append({
+                "port": p,
+                "type": port_type,
+                "used_by": existing["project_name"],
+                "source": "database"
+            })
+    
+    # Check actual ports on VPS
+    try:
+        ssh = get_ssh_client(vps)
+        for p in ports_to_check:
+            stdin, stdout, stderr = ssh.exec_command(f"netstat -tlnp 2>/dev/null | grep ':{p} ' | head -1")
+            result = stdout.read().decode().strip()
+            if result and not any(c["port"] == p for c in conflicts):
+                # Port in use but not in our database
+                process = result.split()[-1] if result.split() else "unknown"
+                port_type = "Frontend" if p == port else ("Backend" if p == backend_port else "MongoDB")
+                conflicts.append({
+                    "port": p,
+                    "type": port_type,
+                    "used_by": f"Processo externo: {process}",
+                    "source": "vps"
+                })
+        ssh.close()
+    except Exception as e:
+        # If we can't check VPS, just use database check
+        pass
+    
+    return {
+        "available": len(conflicts) == 0,
+        "conflicts": conflicts,
+        "ports_checked": {
+            "frontend": port,
+            "backend": backend_port,
+            "mongodb": mongodb_port if create_mongodb else None
+        }
+    }
+
 @api_router.post("/deployments", response_model=DeploymentResponse)
 async def create_deployment(data: DeploymentCreate, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     vps = await db.vps.find_one({"id": data.vps_id, "user_id": user["id"]}, {"_id": 0})
     if not vps:
         raise HTTPException(status_code=404, detail="VPS not found")
     
-    # Check if port is already in use on this VPS
+    backend_port = data.port + 1000  # Calculate backend port
+    
+    # Check if frontend port is already in use on this VPS
     existing_deployment = await db.deployments.find_one({
         "vps_id": data.vps_id, 
-        "port": data.port,
+        "$or": [
+            {"port": data.port},
+            {"backend_port": data.port},
+            {"port": backend_port},
+            {"backend_port": backend_port}
+        ],
         "status": {"$in": ["running", "pending", "cloning", "building", "deploying"]}
     })
     if existing_deployment:
+        conflict_port = data.port if existing_deployment.get("port") == data.port or existing_deployment.get("backend_port") == data.port else backend_port
         raise HTTPException(
             status_code=400, 
-            detail=f"Porta {data.port} já está em uso pelo projeto '{existing_deployment['project_name']}' nesta VPS. Use outra porta."
+            detail=f"Porta {conflict_port} já está em uso pelo projeto '{existing_deployment['project_name']}' nesta VPS. Use outra porta."
         )
+    
+    # Check if MongoDB port conflicts (only if creating MongoDB)
+    if data.create_mongodb:
+        existing_mongo = await db.deployments.find_one({
+            "vps_id": data.vps_id,
+            "mongodb_port": data.mongodb_port,
+            "create_mongodb": True,
+            "status": {"$in": ["running", "pending", "cloning", "building", "deploying"]}
+        })
+        if existing_mongo:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Porta MongoDB {data.mongodb_port} já está em uso pelo projeto '{existing_mongo['project_name']}'. Use outra porta para o MongoDB."
+            )
     
     deployment_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
