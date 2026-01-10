@@ -45,7 +45,7 @@ export default function Register() {
         localStorage.setItem("token", access_token);
         localStorage.setItem("user", JSON.stringify(user));
         toast.success("Conta criada com sucesso!");
-        window.location.href = "/";
+        window.location.href = "/dashboard";
       }
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao criar conta");
