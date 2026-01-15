@@ -364,24 +364,106 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-zinc-800 py-8 px-6">
-        <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
-              <Terminal className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-zinc-400">DeployVPS © 2026</span>
+      {/* FAQ Section - SEO Optimized */}
+      <section className="py-20 px-6 bg-zinc-900/30">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Perguntas Frequentes
+            </h2>
+            <p className="text-zinc-400 text-lg">
+              Tire suas dúvidas sobre como hospedar projetos do Emergent
+            </p>
           </div>
-          <div className="flex items-center gap-6 text-zinc-500 text-sm">
-            <span className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              Dados criptografados
-            </span>
-            <span className="flex items-center gap-2">
-              <Lock className="w-4 h-4" />
-              Conexão segura
-            </span>
+          
+          <div className="space-y-4">
+            {[
+              {
+                question: "Como hospedar um site criado no Emergent?",
+                answer: "Com o DeployVPS você pode hospedar qualquer projeto criado no Emergent.sh em sua própria VPS. Basta salvar o projeto no GitHub usando a função 'Save to GitHub' do Emergent, cadastrar sua VPS no DeployVPS e clicar em Deploy. O sistema detecta automaticamente se é React, Node.js, Python ou FastAPI e configura tudo para você, incluindo MongoDB e SSL."
+              },
+              {
+                question: "O DeployVPS funciona com projetos do Emergent.sh?",
+                answer: "Sim! O DeployVPS é 100% compatível com projetos criados no Emergent.sh. Projetos fullstack com React + FastAPI + MongoDB são detectados automaticamente e deployados com as configurações corretas. Você mantém controle total hospedando em sua própria infraestrutura."
+              },
+              {
+                question: "Posso usar minha própria VPS para hospedar apps do Emergent?",
+                answer: "Sim! O DeployVPS permite que você use qualquer VPS (DigitalOcean, AWS, Linode, Vultr, etc.) para hospedar seus projetos do Emergent. Você tem controle total sobre sua infraestrutura e seus dados."
+              },
+              {
+                question: "O deploy inclui banco de dados MongoDB?",
+                answer: "Sim! O DeployVPS cria automaticamente um container MongoDB para seu projeto, com volume persistente para não perder dados. Também cria automaticamente um usuário admin no primeiro deploy, facilitando o acesso ao sistema."
+              },
+              {
+                question: "Como configurar SSL/HTTPS no meu projeto?",
+                answer: "O DeployVPS configura SSL automaticamente usando Let's Encrypt, que é gratuito. Basta configurar um domínio personalizado apontando para sua VPS e clicar em 'Ativar SSL'. O certificado é gratuito e renovado automaticamente."
+              },
+              {
+                question: "O que acontece com meus dados quando faço redeploy?",
+                answer: "O DeployVPS preserva seu banco de dados MongoDB durante o redeploy. Apenas os containers de frontend e backend são recriados, garantindo que você não perca nenhum dado dos seus usuários."
+              }
+            ].map((faq, index) => (
+              <div key={index} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-3 flex items-start gap-3">
+                  <span className="text-emerald-500">Q:</span>
+                  {faq.question}
+                </h3>
+                <p className="text-zinc-400 pl-7">
+                  <span className="text-emerald-400 font-medium">R:</span> {faq.answer}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-zinc-800 py-12 px-6">
+        <div className="container mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
+                  <Terminal className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold text-white">DeployVPS</span>
+              </div>
+              <p className="text-zinc-400 text-sm max-w-md">
+                Plataforma de deploy automático para hospedar projetos criados no Emergent.sh e GitHub em sua própria VPS. 
+                Suporte a React, Node.js, Python, FastAPI, MongoDB com SSL grátis.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">Recursos</h4>
+              <ul className="space-y-2 text-zinc-400 text-sm">
+                <li>Deploy Automático</li>
+                <li>MongoDB Integrado</li>
+                <li>SSL Gratuito</li>
+                <li>Domínio Personalizado</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">Compatível com</h4>
+              <ul className="space-y-2 text-zinc-400 text-sm">
+                <li>Emergent.sh</li>
+                <li>React / Next.js</li>
+                <li>Python / FastAPI</li>
+                <li>Node.js / Express</li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-zinc-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <span className="text-zinc-500 text-sm">© 2026 DeployVPS. Hospede seus projetos do Emergent na sua VPS.</span>
+            <div className="flex items-center gap-6 text-zinc-500 text-sm">
+              <span className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Dados criptografados
+              </span>
+              <span className="flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                Conexão segura
+              </span>
+            </div>
           </div>
         </div>
       </footer>
