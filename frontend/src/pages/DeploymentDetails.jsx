@@ -18,7 +18,8 @@ import {
 import { toast } from "sonner";
 import { 
   ArrowLeft, GitBranch, RefreshCw, Square, Play, Trash2, 
-  Globe, Terminal, Clock, Server, ExternalLink, Loader2, Copy, Lock, ShieldCheck
+  Globe, Terminal, Clock, Server, ExternalLink, Loader2, Copy, Lock, ShieldCheck,
+  ChevronDown, ChevronRight, CheckCircle, XCircle, Circle
 } from "lucide-react";
 import Header from "../components/Header";
 
@@ -32,6 +33,87 @@ const statusConfig = {
   stopped: { label: "Parado", color: "bg-zinc-500", textColor: "text-zinc-500" },
 };
 
+// Define deployment steps for the progress indicator
+const deploymentSteps = [
+  { id: "pending", label: "Iniciando", keywords: ["Starting", "Iniciando", "Pending"] },
+  { id: "cloning", label: "Clonando Repositório", keywords: ["Cloning", "Clonando", "repository", "repositório"] },
+  { id: "detecting", label: "Detectando Projeto", keywords: ["Detected", "Detectado", "Fullstack", "frontend", "backend"] },
+  { id: "mongodb", label: "Configurando MongoDB", keywords: ["MongoDB", "mongo", "database"] },
+  { id: "building_backend", label: "Construindo Backend", keywords: ["Building backend", "backend container", "Backend build"] },
+  { id: "building_frontend", label: "Construindo Frontend", keywords: ["Building frontend", "frontend container", "Frontend build"] },
+  { id: "starting", label: "Iniciando Containers", keywords: ["Starting container", "Iniciando container", "docker run"] },
+  { id: "running", label: "Deploy Concluído", keywords: ["successful", "sucesso", "running", "Rodando"] },
+];
+
+// Component for collapsible log step
+function LogStep({ step, logs, isActive, isCompleted, isFailed }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const getStepIcon = () => {
+    if (isFailed) return <XCircle className="w-5 h-5 text-red-500" />;
+    if (isCompleted) return <CheckCircle className="w-5 h-5 text-green-500" />;
+    if (isActive) return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
+    return <Circle className="w-5 h-5 text-zinc-600" />;
+  };
+
+  const getStepColor = () => {
+    if (isFailed) return "border-red-500/30 bg-red-500/5";
+    if (isCompleted) return "border-green-500/30 bg-green-500/5";
+    if (isActive) return "border-blue-500/30 bg-blue-500/5";
+    return "border-zinc-800 bg-zinc-900/30";
+  };
+
+  return (
+    <div className={`border rounded-lg overflow-hidden transition-all ${getStepColor()}`}>
+      <button
+        onClick={() => logs.length > 0 && setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+        disabled={logs.length === 0}
+      >
+        <div className="flex items-center gap-3">
+          {getStepIcon()}
+          <span className={`font-medium ${isActive ? "text-blue-400" : isCompleted ? "text-green-400" : isFailed ? "text-red-400" : "text-zinc-500"}`}>
+            {step.label}
+          </span>
+          {isActive && (
+            <span className="text-xs text-blue-400 animate-pulse">Em andamento...</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {logs.length > 0 && (
+            <span className="text-xs text-zinc-500">{logs.length} log(s)</span>
+          )}
+          {logs.length > 0 && (
+            isExpanded ? <ChevronDown className="w-4 h-4 text-zinc-500" /> : <ChevronRight className="w-4 h-4 text-zinc-500" />
+          )}
+        </div>
+      </button>
+      
+      {isExpanded && logs.length > 0 && (
+        <div className="border-t border-zinc-800 bg-zinc-950/50 p-3 max-h-60 overflow-y-auto">
+          <div className="font-mono text-xs space-y-1">
+            {logs.map((log, i) => (
+              <div 
+                key={i} 
+                className={`flex gap-2 ${
+                  log.level === "error" ? "text-red-400" : 
+                  log.level === "success" ? "text-green-400" : 
+                  log.level === "warning" ? "text-yellow-400" : "text-zinc-400"
+                }`}
+              >
+                <span className="text-zinc-600 flex-shrink-0">
+                  {new Date(log.timestamp).toLocaleTimeString("pt-BR")}
+                </span>
+                <span className="whitespace-pre-wrap break-all">{log.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DeploymentDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -42,6 +124,7 @@ export default function DeploymentDetails() {
   const [actionLoading, setActionLoading] = useState(null);
   const [domainDialogOpen, setDomainDialogOpen] = useState(false);
   const [domain, setDomain] = useState("");
+  const [showAllLogs, setShowAllLogs] = useState(false);
   const logsEndRef = useRef(null);
 
   const fetchData = async (isInitial = false) => {
@@ -60,7 +143,7 @@ export default function DeploymentDetails() {
     } catch (error) {
       if (isInitial) {
         toast.error("Erro ao carregar dados");
-        navigate("/");
+        navigate("/dashboard");
       }
     } finally {
       if (isInitial) {
@@ -76,8 +159,46 @@ export default function DeploymentDetails() {
   }, [id]);
 
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [deployment?.logs, containerLogs]);
+    if (showAllLogs) {
+      logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [deployment?.logs, containerLogs, showAllLogs]);
+
+  // Organize logs into steps
+  const organizeLogsIntoSteps = () => {
+    const logs = deployment?.logs || [];
+    const stepLogs = {};
+    let currentStepIndex = 0;
+
+    deploymentSteps.forEach(step => {
+      stepLogs[step.id] = [];
+    });
+
+    logs.forEach(log => {
+      const message = log.message.toLowerCase();
+      let assigned = false;
+
+      // Find which step this log belongs to
+      for (let i = deploymentSteps.length - 1; i >= 0; i--) {
+        const step = deploymentSteps[i];
+        if (step.keywords.some(keyword => message.includes(keyword.toLowerCase()))) {
+          stepLogs[step.id].push(log);
+          if (i > currentStepIndex) currentStepIndex = i;
+          assigned = true;
+          break;
+        }
+      }
+
+      // If not matched, add to the current active step
+      if (!assigned && currentStepIndex < deploymentSteps.length) {
+        stepLogs[deploymentSteps[currentStepIndex].id].push(log);
+      }
+    });
+
+    return { stepLogs, currentStepIndex };
+  };
+
+  const { stepLogs, currentStepIndex } = deployment ? organizeLogsIntoSteps() : { stepLogs: {}, currentStepIndex: 0 };
 
   const handleRedeploy = async () => {
     setActionLoading("redeploy");
@@ -111,7 +232,7 @@ export default function DeploymentDetails() {
     try {
       await api.delete(`/deployments/${id}`);
       toast.success("Deployment removido");
-      navigate("/");
+      navigate("/dashboard");
     } catch (error) {
       toast.error("Erro ao remover deployment");
     }
@@ -198,7 +319,7 @@ export default function DeploymentDetails() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Button
           variant="ghost"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/dashboard")}
           className="mb-6 text-zinc-400 hover:text-white"
           data-testid="back-btn"
         >
@@ -414,7 +535,6 @@ export default function DeploymentDetails() {
                       </Button>
                     </div>
                     
-                    {/* SSL/HTTPS Button */}
                     <Button
                       variant="outline"
                       size="sm"
@@ -446,7 +566,7 @@ export default function DeploymentDetails() {
                     </Button>
                   </div>
                 ) : (
-                      <Dialog open={domainDialogOpen} onOpenChange={setDomainDialogOpen}>
+                  <Dialog open={domainDialogOpen} onOpenChange={setDomainDialogOpen}>
                     <DialogTrigger asChild>
                       <Button
                         variant="outline"
@@ -498,28 +618,16 @@ export default function DeploymentDetails() {
                                 <p className="text-zinc-300">Crie um registro do tipo <span className="font-mono bg-zinc-700 px-1 rounded">A</span></p>
                                 <div className="mt-1 bg-zinc-900 rounded p-2 font-mono text-xs space-y-1">
                                   <p><span className="text-zinc-500">Tipo:</span> <span className="text-green-500">A</span></p>
-                                  <p><span className="text-zinc-500">Nome:</span> <span className="text-green-500">{domain || "app"}</span> <span className="text-zinc-600">(ou @ para raiz)</span></p>
+                                  <p><span className="text-zinc-500">Nome:</span> <span className="text-green-500">{domain || "app"}</span></p>
                                   <p><span className="text-zinc-500">Valor:</span> <span className="text-green-500">{vps?.host}</span></p>
-                                  <p><span className="text-zinc-500">TTL:</span> <span className="text-green-500">Auto</span> <span className="text-zinc-600">(ou 3600)</span></p>
+                                  <p><span className="text-zinc-500">TTL:</span> <span className="text-green-500">Auto</span></p>
                                 </div>
                               </div>
                             </div>
                             
                             <div className="flex gap-3">
                               <span className="bg-zinc-700 text-zinc-300 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
-                              <div>
-                                <p className="text-zinc-300">Aguarde propagação DNS (até 24h, geralmente minutos)</p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex gap-3">
-                              <span className="bg-zinc-700 text-zinc-300 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
-                              <div>
-                                <p className="text-zinc-300">Para HTTPS (SSL), execute na VPS:</p>
-                                <code className="mt-1 block bg-zinc-900 rounded p-2 font-mono text-xs text-green-400">
-                                  sudo certbot --nginx -d {domain || "seu.dominio.com"}
-                                </code>
-                              </div>
+                              <p className="text-zinc-300">Aguarde propagação DNS (até 24h, geralmente minutos)</p>
                             </div>
                           </div>
                         </div>
@@ -553,55 +661,119 @@ export default function DeploymentDetails() {
             </Card>
           </div>
 
-          {/* Logs */}
+          {/* Logs - New Emergent-style */}
           <div className="md:col-span-2">
-            <Card className="bg-zinc-900/50 border-zinc-800 h-[600px] flex flex-col">
-              <CardHeader className="pb-2 flex-shrink-0">
+            <Card className="bg-zinc-900/50 border-zinc-800 flex flex-col">
+              <CardHeader className="pb-2 flex-shrink-0 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium text-zinc-400 flex items-center gap-2">
                   <Terminal className="w-4 h-4" />
-                  Logs
+                  Progresso do Deploy
                 </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAllLogs(!showAllLogs)}
+                  className="text-xs text-zinc-500 hover:text-zinc-300"
+                >
+                  {showAllLogs ? "Ver Resumido" : "Ver Todos os Logs"}
+                </Button>
               </CardHeader>
-              <CardContent className="flex-1 overflow-hidden p-0">
-                <ScrollArea className="h-full px-6 pb-6">
-                  <div className="terminal-log rounded p-4 font-mono text-xs space-y-1">
-                    {deployment.logs?.map((log, i) => (
-                      <div 
-                        key={i} 
-                        className={`log-entry flex gap-3 ${
-                          log.level === "error" ? "text-red-400" : 
-                          log.level === "success" ? "text-green-400" : "text-zinc-400"
-                        }`}
-                      >
-                        <span className="text-zinc-600 flex-shrink-0">
-                          {new Date(log.timestamp).toLocaleTimeString("pt-BR")}
-                        </span>
-                        <span className="whitespace-pre-wrap break-all">{log.message}</span>
-                      </div>
-                    ))}
-                    
-                    {containerLogs.length > 0 && (
-                      <>
-                        <div className="border-t border-zinc-800 my-4 pt-4">
-                          <span className="text-zinc-500">--- Container Logs ---</span>
-                        </div>
-                        {containerLogs.map((line, i) => (
-                          <div key={`container-${i}`} className="text-zinc-400 whitespace-pre-wrap break-all">
-                            {line}
+              <CardContent className="flex-1 overflow-hidden p-4">
+                {!showAllLogs ? (
+                  // Emergent-style step view
+                  <ScrollArea className="h-[500px] pr-4">
+                    <div className="space-y-3">
+                      {deploymentSteps.map((step, index) => {
+                        const logs = stepLogs[step.id] || [];
+                        const isActive = isDeploying && index === currentStepIndex;
+                        const isCompleted = deployment.status === "running" 
+                          ? true 
+                          : deployment.status === "failed" 
+                            ? index < currentStepIndex
+                            : index < currentStepIndex;
+                        const isFailed = deployment.status === "failed" && index === currentStepIndex;
+                        
+                        return (
+                          <LogStep
+                            key={step.id}
+                            step={step}
+                            logs={logs}
+                            isActive={isActive}
+                            isCompleted={isCompleted}
+                            isFailed={isFailed}
+                          />
+                        );
+                      })}
+                      
+                      {/* Container Logs Section */}
+                      {containerLogs.length > 0 && (
+                        <div className="border border-zinc-800 rounded-lg overflow-hidden mt-4">
+                          <button
+                            onClick={() => {}}
+                            className="w-full flex items-center justify-between p-3 bg-zinc-900/50 hover:bg-white/5"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Terminal className="w-5 h-5 text-zinc-500" />
+                              <span className="font-medium text-zinc-400">Logs do Container</span>
+                            </div>
+                            <span className="text-xs text-zinc-500">{containerLogs.length} linha(s)</span>
+                          </button>
+                          <div className="border-t border-zinc-800 bg-zinc-950/50 p-3 max-h-40 overflow-y-auto">
+                            <div className="font-mono text-xs space-y-1">
+                              {containerLogs.slice(-20).map((line, i) => (
+                                <div key={i} className="text-zinc-400 whitespace-pre-wrap break-all">
+                                  {line}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        ))}
-                      </>
-                    )}
-                    
-                    {(deployment.logs?.length === 0 && containerLogs.length === 0) && (
-                      <div className="text-zinc-600 text-center py-8">
-                        Aguardando logs...
-                      </div>
-                    )}
-                    
-                    <div ref={logsEndRef} />
-                  </div>
-                </ScrollArea>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  // Traditional full log view
+                  <ScrollArea className="h-[500px]">
+                    <div className="terminal-log rounded p-4 font-mono text-xs space-y-1">
+                      {deployment.logs?.map((log, i) => (
+                        <div 
+                          key={i} 
+                          className={`log-entry flex gap-3 ${
+                            log.level === "error" ? "text-red-400" : 
+                            log.level === "success" ? "text-green-400" : 
+                            log.level === "warning" ? "text-yellow-400" : "text-zinc-400"
+                          }`}
+                        >
+                          <span className="text-zinc-600 flex-shrink-0">
+                            {new Date(log.timestamp).toLocaleTimeString("pt-BR")}
+                          </span>
+                          <span className="whitespace-pre-wrap break-all">{log.message}</span>
+                        </div>
+                      ))}
+                      
+                      {containerLogs.length > 0 && (
+                        <>
+                          <div className="border-t border-zinc-800 my-4 pt-4">
+                            <span className="text-zinc-500">--- Container Logs ---</span>
+                          </div>
+                          {containerLogs.map((line, i) => (
+                            <div key={`container-${i}`} className="text-zinc-400 whitespace-pre-wrap break-all">
+                              {line}
+                            </div>
+                          ))}
+                        </>
+                      )}
+                      
+                      {(deployment.logs?.length === 0 && containerLogs.length === 0) && (
+                        <div className="text-zinc-600 text-center py-8">
+                          Aguardando logs...
+                        </div>
+                      )}
+                      
+                      <div ref={logsEndRef} />
+                    </div>
+                  </ScrollArea>
+                )}
               </CardContent>
             </Card>
           </div>
