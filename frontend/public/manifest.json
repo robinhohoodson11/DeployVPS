@@ -1,6 +1,6 @@
 {
   "short_name": "DeployVPS",
-  "name": "DeployVPS - Deploy Automático para VPS",
+  "name": "DeployVPS - Hospede projetos do Emergent na sua VPS",
   "icons": [
     {
       "src": "favicon.svg",
@@ -12,5 +12,8 @@
   "display": "standalone",
   "theme_color": "#09090b",
   "background_color": "#09090b",
-  "description": "Sistema de deploy automático para VPS. Hospede seus projetos do GitHub diretamente em sua VPS pessoal."
+  "description": "Sistema de deploy automático para hospedar projetos criados no Emergent.sh em sua própria VPS. Suporte a React, Node.js, Python, FastAPI, MongoDB com SSL grátis.",
+  "categories": ["developer tools", "productivity", "utilities"],
+  "lang": "pt-BR",
+  "dir": "ltr"
 }
