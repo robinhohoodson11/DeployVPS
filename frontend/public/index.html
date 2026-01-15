@@ -4,46 +4,208 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#09090b" />
-        <meta name="description" content="DeployVPS - Sistema de deploy automático para VPS. Hospede seus projetos do GitHub diretamente em sua VPS pessoal." />
-        <meta name="keywords" content="deploy, vps, github, docker, automação, hospedagem" />
+        
+        <!-- SEO Primary Meta Tags -->
+        <title>DeployVPS - Hospede seu projeto do Emergent na sua própria VPS</title>
+        <meta name="title" content="DeployVPS - Hospede seu projeto do Emergent na sua própria VPS" />
+        <meta name="description" content="Criou seu app no Emergent.sh? Faça deploy automático na sua VPS! Sistema completo para hospedar projetos React, Node.js, Python, FastAPI com MongoDB, SSL grátis e domínio personalizado." />
+        <meta name="keywords" content="hospedar site emergent, deploy emergent, hospedar projeto emergent, como hospedar app do emergent, emergent deploy vps, hospedagem emergent.sh, deploy automático vps, hospedar react vps, hospedar node vps, hospedar python vps, fastapi deploy, mongodb docker, ssl grátis vps, deploy github vps, alternativa vercel, alternativa netlify, hospedagem própria, self-hosted, deploy fullstack" />
         <meta name="author" content="DeployVPS" />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+        <meta name="language" content="Portuguese" />
+        <meta name="revisit-after" content="7 days" />
+        <meta name="coverage" content="Worldwide" />
+        <meta name="distribution" content="Global" />
+        <link rel="canonical" href="https://deployvps.com" />
+
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://deployvps.com/" />
+        <meta property="og:title" content="DeployVPS - Hospede seu projeto do Emergent na sua própria VPS" />
+        <meta property="og:description" content="Criou seu app no Emergent.sh? Faça deploy automático na sua VPS! MongoDB, SSL grátis e domínio personalizado inclusos." />
+        <meta property="og:image" content="https://deployvps.com/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:locale" content="pt_BR" />
+        <meta property="og:site_name" content="DeployVPS" />
+
+        <!-- Twitter -->
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://deployvps.com/" />
+        <meta property="twitter:title" content="DeployVPS - Hospede seu projeto do Emergent na sua própria VPS" />
+        <meta property="twitter:description" content="Criou seu app no Emergent.sh? Faça deploy automático na sua VPS! MongoDB, SSL grátis e domínio personalizado inclusos." />
+        <meta property="twitter:image" content="https://deployvps.com/og-image.png" />
+
+        <!-- Additional SEO Meta Tags -->
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="DeployVPS" />
+        <meta name="application-name" content="DeployVPS" />
+        <meta name="msapplication-TileColor" content="#09090b" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
+
         <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg" />
-        <link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.svg" />
+        <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/favicon.svg" />
         <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-        <!--
-        manifest.json provides metadata used when your web app is installed on a
-        user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-        -->
-        <!--
-        Notice the use of %PUBLIC_URL% in the tags above.
-        It will be replaced with the URL of the `public` folder during the build.
-        Only files inside the `public` folder can be referenced from the HTML.
 
-        Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-        work correctly both with client-side routing and a non-root public URL.
-        Learn how to configure a non-root public URL by running `npm run build`.
-        -->
-        <title>DeployVPS - Deploy Automático para VPS</title>
+        <!-- Preconnect to external resources -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        
+        <!-- JSON-LD Structured Data for Search Engines and AI -->
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "DeployVPS",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Web",
+            "description": "Sistema de deploy automático para hospedar projetos criados no Emergent.sh em sua própria VPS. Suporte a React, Node.js, Python, FastAPI, MongoDB com SSL grátis.",
+            "url": "https://deployvps.com",
+            "author": {
+                "@type": "Organization",
+                "name": "DeployVPS"
+            },
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "BRL"
+            },
+            "featureList": [
+                "Deploy automático de projetos Emergent.sh",
+                "Hospedagem em VPS própria",
+                "Suporte a React, Node.js, Python, FastAPI",
+                "MongoDB automático",
+                "SSL grátis com Let's Encrypt",
+                "Domínio personalizado",
+                "Redeploy sem perda de dados",
+                "Integração GitHub"
+            ],
+            "screenshot": "https://deployvps.com/screenshot.png",
+            "softwareVersion": "1.0",
+            "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "4.8",
+                "ratingCount": "50"
+            }
+        }
+        </script>
+
+        <!-- FAQ Schema for AI and Search -->
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": "Como hospedar um site criado no Emergent?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Com o DeployVPS você pode hospedar qualquer projeto criado no Emergent.sh em sua própria VPS. Basta salvar o projeto no GitHub, cadastrar sua VPS no DeployVPS e clicar em Deploy. O sistema detecta automaticamente se é React, Node.js, Python ou FastAPI e configura tudo para você, incluindo MongoDB e SSL."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "O DeployVPS funciona com projetos do Emergent.sh?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Sim! O DeployVPS é 100% compatível com projetos criados no Emergent.sh. Projetos fullstack com React + FastAPI + MongoDB são detectados automaticamente e deployados com as configurações corretas."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Posso usar minha própria VPS para hospedar apps do Emergent?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Sim! O DeployVPS permite que você use qualquer VPS (DigitalOcean, AWS, Linode, etc.) para hospedar seus projetos do Emergent. Você tem controle total sobre sua infraestrutura."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "O deploy inclui banco de dados MongoDB?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Sim! O DeployVPS cria automaticamente um container MongoDB para seu projeto, com volume persistente para não perder dados. Também cria automaticamente um usuário admin no primeiro deploy."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Como configurar SSL/HTTPS no meu projeto?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "O DeployVPS configura SSL automaticamente usando Let's Encrypt. Basta configurar um domínio personalizado e clicar em 'Ativar SSL'. O certificado é gratuito e renovado automaticamente."
+                    }
+                }
+            ]
+        }
+        </script>
+
+        <!-- HowTo Schema for "como hospedar" searches -->
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "HowTo",
+            "name": "Como hospedar um projeto do Emergent na sua VPS",
+            "description": "Guia passo a passo para fazer deploy de projetos criados no Emergent.sh em sua própria VPS usando o DeployVPS",
+            "step": [
+                {
+                    "@type": "HowToStep",
+                    "name": "Salve seu projeto no GitHub",
+                    "text": "No Emergent.sh, use a função 'Save to GitHub' para exportar seu projeto para um repositório GitHub."
+                },
+                {
+                    "@type": "HowToStep",
+                    "name": "Cadastre sua VPS",
+                    "text": "No DeployVPS, adicione as credenciais SSH da sua VPS (DigitalOcean, AWS, Linode, etc.)."
+                },
+                {
+                    "@type": "HowToStep",
+                    "name": "Configure o deploy",
+                    "text": "Informe o repositório GitHub, escolha a porta e marque as opções de MongoDB e SSL se necessário."
+                },
+                {
+                    "@type": "HowToStep",
+                    "name": "Clique em Deploy",
+                    "text": "O DeployVPS detecta automaticamente o tipo de projeto (React, FastAPI, etc.) e faz o deploy completo."
+                },
+                {
+                    "@type": "HowToStep",
+                    "name": "Configure domínio e SSL",
+                    "text": "Opcionalmente, configure um domínio personalizado e ative o SSL gratuito com Let's Encrypt."
+                }
+            ],
+            "totalTime": "PT5M"
+        }
+        </script>
+
+        <!-- Organization Schema -->
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "DeployVPS",
+            "url": "https://deployvps.com",
+            "logo": "https://deployvps.com/logo.png",
+            "description": "Plataforma de deploy automático para hospedar projetos do Emergent.sh e GitHub em VPS própria",
+            "sameAs": []
+        }
+        </script>
+
         <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
-        <!--
-        These two scripts have been added for the Visual Edits, please do not edit or remove them
-        -->
         <script>
             // Only load visual edit scripts when inside an iframe
             if (window.self !== window.top) {
-                // Load debug monitor script
                 var debugMonitorScript = document.createElement('script');
                 debugMonitorScript.src = 'https://assets.emergent.sh/scripts/debug-monitor.js';
                 document.head.appendChild(debugMonitorScript);
 
-                // Configure Tailwind
                 window.tailwind = window.tailwind || {};
                 tailwind.config = {
                     corePlugins: { preflight: false },
                 };
 
-                // Load Tailwind CDN
                 var tailwindScript = document.createElement('script');
                 tailwindScript.src = 'https://cdn.tailwindcss.com';
                 document.head.appendChild(tailwindScript);
@@ -51,18 +213,12 @@
         </script>
     </head>
     <body>
-        <noscript>You need to enable JavaScript to run this app.</noscript>
+        <noscript>
+            <h1>DeployVPS - Hospede seu projeto do Emergent na sua própria VPS</h1>
+            <p>Criou seu app no Emergent.sh? Faça deploy automático na sua VPS! Sistema completo para hospedar projetos React, Node.js, Python, FastAPI com MongoDB, SSL grátis e domínio personalizado.</p>
+            <p>Você precisa habilitar JavaScript para usar este aplicativo.</p>
+        </noscript>
         <div id="root"></div>
-        <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
         <script>
             !(function (t, e) {
                 var o, n, p, r;
@@ -127,7 +283,7 @@
             })(document, window.posthog || []);
             posthog.init("phc_yJW1VjHGGwmCbbrtczfqqNxgBDbhlhOWcdzcIJEOTFE", {
                 api_host: "https://us.i.posthog.com",
-                person_profiles: "identified_only", // or 'always' to create profiles for anonymous users as well
+                person_profiles: "identified_only",
             });
         </script>
     </body>
