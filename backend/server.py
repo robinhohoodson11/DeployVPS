@@ -1603,7 +1603,9 @@ async def delete_deployment(deployment_id: str, user: dict = Depends(get_current
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
     
-    # Try to stop and remove ALL containers (frontend, backend, mongodb)
+    cleanup_log = []
+    
+    # Try to stop and remove ALL containers, images, volumes, and files
     vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
     if vps:
         try:
@@ -1618,23 +1620,72 @@ async def delete_deployment(deployment_id: str, user: dict = Depends(get_current
                 f"mongodb_{project_name}",     # MongoDB container
             ]
             
-            # Stop and remove all containers
+            # 1. Stop and remove all containers
             for container in containers_to_remove:
-                ssh.exec_command(f"docker stop {container} 2>/dev/null; docker rm {container} 2>/dev/null")
+                stdin, stdout, stderr = ssh.exec_command(f"docker stop {container} 2>/dev/null && docker rm -f {container} 2>/dev/null && echo 'Removed {container}'")
+                result = stdout.read().decode().strip()
+                if result:
+                    cleanup_log.append(result)
             
-            # Also remove the Docker network if it exists
+            # 2. Remove Docker images
+            images_to_remove = [
+                f"deploy_{project_name}:latest",
+                f"frontend_{project_name}:latest",
+                f"backend_{project_name}:latest",
+            ]
+            for image in images_to_remove:
+                stdin, stdout, stderr = ssh.exec_command(f"docker rmi {image} 2>/dev/null && echo 'Removed image {image}'")
+                result = stdout.read().decode().strip()
+                if result:
+                    cleanup_log.append(result)
+            
+            # 3. Remove Docker volumes (MongoDB data)
+            volume_name = f"mongodb_data_{project_name}"
+            stdin, stdout, stderr = ssh.exec_command(f"docker volume rm {volume_name} 2>/dev/null && echo 'Removed volume {volume_name}'")
+            result = stdout.read().decode().strip()
+            if result:
+                cleanup_log.append(result)
+            
+            # 4. Remove Docker network
             network_name = f"network_{project_name}"
-            ssh.exec_command(f"docker network rm {network_name} 2>/dev/null")
+            stdin, stdout, stderr = ssh.exec_command(f"docker network rm {network_name} 2>/dev/null && echo 'Removed network {network_name}'")
+            result = stdout.read().decode().strip()
+            if result:
+                cleanup_log.append(result)
             
-            # Optionally remove deployment directory (commented out for safety)
-            # ssh.exec_command(f"rm -rf /opt/deployments/{project_name}")
+            # 5. Remove deployment directory and all files
+            base_dir = f"/opt/deployments/{project_name}"
+            stdin, stdout, stderr = ssh.exec_command(f"rm -rf {base_dir} && echo 'Removed directory {base_dir}'")
+            result = stdout.read().decode().strip()
+            if result:
+                cleanup_log.append(result)
+            
+            # 6. Remove domain configuration if exists
+            if deployment.get("domain"):
+                domain = deployment["domain"]
+                web_server = deployment.get("web_server", "nginx")
+                
+                if web_server == "apache":
+                    ssh.exec_command(f"a2dissite {domain}.conf {domain}-le-ssl.conf 2>/dev/null")
+                    ssh.exec_command(f"rm -f /etc/apache2/sites-available/{domain}.conf /etc/apache2/sites-available/{domain}-le-ssl.conf")
+                    ssh.exec_command("systemctl reload apache2 2>/dev/null")
+                    cleanup_log.append(f"Removed Apache config for {domain}")
+                else:
+                    ssh.exec_command(f"rm -f /etc/nginx/sites-enabled/{project_name} /etc/nginx/sites-available/{project_name}")
+                    ssh.exec_command("systemctl reload nginx 2>/dev/null")
+                    cleanup_log.append(f"Removed Nginx config for {domain}")
+            
+            # 7. Prune unused Docker resources to free memory
+            ssh.exec_command("docker image prune -f 2>/dev/null")
+            ssh.exec_command("docker builder prune -f 2>/dev/null")
+            cleanup_log.append("Pruned unused Docker resources")
             
             ssh.close()
-        except:
-            pass
+        except Exception as e:
+            cleanup_log.append(f"Cleanup warning: {str(e)}")
     
     await db.deployments.delete_one({"id": deployment_id})
-    return {"message": "Deployment deleted"}
+    return {"message": "Deployment deleted completely", "cleanup": cleanup_log}
 
 # ============ DOMAIN ROUTES ============
 
