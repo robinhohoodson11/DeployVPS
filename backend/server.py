@@ -1904,9 +1904,28 @@ async def get_container_logs(deployment_id: str, user: dict = Depends(get_curren
     
     try:
         ssh = get_ssh_client(vps)
-        container_name = f"deploy_{deployment['project_name']}"
-        stdin, stdout, stderr = ssh.exec_command(f"docker logs --tail 100 {container_name} 2>&1")
-        container_logs = stdout.read().decode().split("\n")
+        project_name = deployment['project_name']
+        deploy_type = deployment.get("deploy_type", "static")
+        container_logs = []
+        
+        if deploy_type == "fullstack":
+            # Get logs from both frontend and backend containers
+            frontend_container = f"frontend_{project_name}"
+            backend_container = f"backend_{project_name}"
+            
+            stdin, stdout, stderr = ssh.exec_command(f"echo '=== Frontend Logs ===' && docker logs --tail 50 {frontend_container} 2>&1")
+            frontend_logs = stdout.read().decode()
+            
+            stdin, stdout, stderr = ssh.exec_command(f"echo '=== Backend Logs ===' && docker logs --tail 50 {backend_container} 2>&1")
+            backend_logs = stdout.read().decode()
+            
+            container_logs = (frontend_logs + "\n" + backend_logs).split("\n")
+        else:
+            # Single container deployment
+            container_name = f"deploy_{project_name}"
+            stdin, stdout, stderr = ssh.exec_command(f"docker logs --tail 100 {container_name} 2>&1")
+            container_logs = stdout.read().decode().split("\n")
+        
         ssh.close()
         
         return {"logs": deployment.get("logs", []), "container_logs": container_logs}
