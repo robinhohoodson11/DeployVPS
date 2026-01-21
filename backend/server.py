@@ -842,6 +842,36 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict, is_red
         port = deployment["port"]
         backend_port = port + 1000  # Backend will run on port + 1000
         
+        # ============ PRE-DEPLOYMENT CHECKS ============
+        await add_deployment_log(deployment_id, "🔍 Running pre-deployment checks...")
+        
+        # Check disk space
+        stdin, stdout, stderr = ssh.exec_command("df / --output=pcent | tail -1 | tr -d ' %'")
+        disk_usage = stdout.read().decode().strip()
+        try:
+            disk_percent = int(disk_usage)
+            if disk_percent > 90:
+                await add_deployment_log(deployment_id, f"⚠️ Disk usage at {disk_percent}%! Cleaning up...", "warning")
+                # Auto cleanup
+                ssh.exec_command("docker image prune -af > /dev/null 2>&1")
+                ssh.exec_command("docker container prune -f > /dev/null 2>&1")
+                ssh.exec_command("docker builder prune -af > /dev/null 2>&1")
+                ssh.exec_command("journalctl --vacuum-time=2d > /dev/null 2>&1")
+                await asyncio.sleep(3)
+                
+                # Recheck
+                stdin, stdout, stderr = ssh.exec_command("df / --output=pcent | tail -1 | tr -d ' %'")
+                disk_usage_after = stdout.read().decode().strip()
+                disk_percent_after = int(disk_usage_after) if disk_usage_after.isdigit() else 0
+                await add_deployment_log(deployment_id, f"✅ Disk cleanup complete. Now at {disk_percent_after}%", "success")
+                
+                if disk_percent_after > 95:
+                    raise Exception(f"Disk space critically low ({disk_percent_after}%). Please free up space manually.")
+            else:
+                await add_deployment_log(deployment_id, f"✅ Disk space OK ({disk_percent}% used)", "success")
+        except ValueError:
+            await add_deployment_log(deployment_id, "⚠️ Could not check disk space", "warning")
+        
         # Add GitHub token if provided for private repos
         if deployment.get("github_token_encrypted"):
             token = decrypt_data(deployment["github_token_encrypted"])
