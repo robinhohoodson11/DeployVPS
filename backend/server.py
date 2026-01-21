@@ -1095,6 +1095,69 @@ CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "{b
             # Get VPS host for frontend to connect to backend
             vps_host = vps["host"]
             
+            # Auto-fix hostname detection in React apps (for apps that check hostname for admin mode)
+            await add_deployment_log(deployment_id, "🔧 Applying hostname fix for admin access...", "info")
+            hostname_fix_script = f"""
+import os
+import re
+
+def fix_hostname_detection(directory):
+    '''Add VPS IP to hostname checks in React apps'''
+    vps_ip = "{vps_host}"
+    files_fixed = 0
+    
+    for root, dirs, files in os.walk(directory):
+        # Skip node_modules
+        if 'node_modules' in root:
+            continue
+        for filename in files:
+            if filename.endswith(('.js', '.jsx', '.ts', '.tsx')):
+                filepath = os.path.join(root, filename)
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    # Pattern to find hostname checks like: hostname.includes('something')
+                    # Add VPS IP to the last condition before the closing parenthesis
+                    patterns = [
+                        # Pattern: hostname.includes('domain')) {{ return 'admin'
+                        (r"(hostname\.includes\(['\"][^'\"]+['\"]\))\s*\)\s*\{{", 
+                         r"\\1 || hostname.includes('" + vps_ip + r"')) {{"),
+                        # Pattern: hostname === 'domain')
+                        (r"(hostname\s*===?\s*['\"][^'\"]+['\"]\))\s*\{{",
+                         r"\\1 || hostname.includes('" + vps_ip + r"')) {{"),
+                    ]
+                    
+                    modified = False
+                    for pattern, replacement in patterns:
+                        if re.search(pattern, content) and vps_ip not in content:
+                            # Find the last hostname.includes before a specific return
+                            # Look for patterns like: hostname.includes('x') || hostname.includes('y')) {{
+                            if "hostname.includes" in content and vps_ip not in content:
+                                # Add IP to existing hostname checks
+                                content = re.sub(
+                                    r"(hostname\.includes\(['\"][^'\"]+['\"]\))\s*\)\s*\{{(\s*(?:console\.log|return))",
+                                    r"\\1 || hostname.includes('" + vps_ip + r"')) {{\\2",
+                                    content
+                                )
+                                modified = True
+                    
+                    if modified:
+                        with open(filepath, 'w', encoding='utf-8') as f:
+                            f.write(content)
+                        files_fixed += 1
+                        print(f"Fixed: {{filepath}}")
+                except Exception as e:
+                    pass
+    
+    return files_fixed
+
+# Run the fix
+fixed = fix_hostname_detection('/app/frontend/src')
+print(f"Total files fixed: {{fixed}}")
+"""
+            hostname_fix_b64 = base64.b64encode(hostname_fix_script.encode()).decode()
+            
             frontend_dockerfile = f"""FROM node:18-alpine as build
 WORKDIR /app
 COPY frontend/package*.json ./
@@ -1102,6 +1165,8 @@ RUN rm -f package-lock.json
 RUN npm install --legacy-peer-deps
 RUN npm install ajv@^8.12.0 ajv-keywords@^5.1.0 --legacy-peer-deps 2>/dev/null || true
 COPY frontend/ .
+# Apply hostname fix for admin access via IP
+RUN apk add --no-cache python3 && echo "{hostname_fix_b64}" | base64 -d | python3 || true
 ENV CI=false
 ENV DISABLE_ESLINT_PLUGIN=true
 ENV REACT_APP_BACKEND_URL=http://{vps_host}:{backend_port}
