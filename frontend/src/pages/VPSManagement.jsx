@@ -381,6 +381,22 @@ export default function VPSManagement() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => handleCheckSecurity(vps.id)}
+                      disabled={checkingSecurity === vps.id}
+                      className="flex-1 border-zinc-700 hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/50"
+                    >
+                      {checkingSecurity === vps.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Shield className="w-4 h-4 mr-2" />
+                          Segurança
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleDelete(vps.id)}
                       data-testid={`delete-vps-${vps.id}`}
                       className="border-zinc-700 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/50"
@@ -393,6 +409,90 @@ export default function VPSManagement() {
             ))}
           </div>
         )}
+
+        {/* Security Report Dialog */}
+        <Dialog open={securityDialogOpen} onOpenChange={setSecurityDialogOpen}>
+          <DialogContent className="bg-zinc-900 border-zinc-800 max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Relatório de Segurança
+              </DialogTitle>
+              <DialogDescription className="text-zinc-500">
+                {securityReport?.vps_name} ({securityReport?.host})
+              </DialogDescription>
+            </DialogHeader>
+            
+            {securityReport && (
+              <div className="space-y-4 mt-4">
+                {/* Grade */}
+                <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-lg">
+                  <span className="text-zinc-400">Nota de Segurança</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-3xl font-bold ${
+                      securityReport.grade === 'A' ? 'text-green-500' :
+                      securityReport.grade === 'B' ? 'text-emerald-500' :
+                      securityReport.grade === 'C' ? 'text-yellow-500' :
+                      'text-red-500'
+                    }`}>
+                      {securityReport.grade}
+                    </span>
+                    <span className="text-zinc-500 text-sm">
+                      ({securityReport.score}/{securityReport.max_score})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Checks */}
+                <div className="space-y-2">
+                  {securityReport.checks.map((check, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-zinc-800/30 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        {check.ok ? (
+                          <ShieldCheck className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <ShieldAlert className="w-4 h-4 text-yellow-500" />
+                        )}
+                        <span className="text-zinc-300">{check.name}</span>
+                      </div>
+                      <span className={check.ok ? "text-green-500 text-sm" : "text-yellow-500 text-sm"}>
+                        {check.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4 border-t border-zinc-800">
+                  <Button
+                    variant="outline"
+                    onClick={() => setSecurityDialogOpen(false)}
+                    className="flex-1 border-zinc-700"
+                  >
+                    Fechar
+                  </Button>
+                  {securityReport.score < securityReport.max_score && (
+                    <Button
+                      onClick={() => {
+                        const vpsId = vpsList.find(v => v.name === securityReport.vps_name)?.id;
+                        if (vpsId) handleHardenSecurity(vpsId);
+                      }}
+                      disabled={hardeningVps !== null}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      {hardeningVps !== null ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <ShieldCheck className="w-4 h-4 mr-2" />
+                      )}
+                      Reforçar Segurança
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
