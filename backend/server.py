@@ -371,7 +371,15 @@ async def send_approval_email(user_email: str, user_name: str):
 # ============ AUTH ROUTES ============
 
 @api_router.post("/auth/register")
-async def register(user_data: UserCreate, background_tasks: BackgroundTasks):
+@api_router.post("/auth/register")
+async def register(user_data: UserCreate, request: Request, background_tasks: BackgroundTasks):
+    # Rate limiting
+    client_ip = get_client_ip(request)
+    if rate_limiter.is_blocked(client_ip):
+        raise HTTPException(status_code=429, detail="Muitas tentativas. Tente novamente em alguns minutos.")
+    if not rate_limiter.check_rate_limit(client_ip, limit=10, window=60):
+        raise HTTPException(status_code=429, detail="Muitas requisições. Aguarde um momento.")
+    
     existing = await db.users.find_one({"email": user_data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -412,10 +420,23 @@ async def register(user_data: UserCreate, background_tasks: BackgroundTasks):
     )
 
 @api_router.post("/auth/login", response_model=TokenResponse)
-async def login(credentials: UserLogin):
+async def login(credentials: UserLogin, request: Request):
+    # Security: Rate limiting and brute force protection
+    client_ip = get_client_ip(request)
+    if rate_limiter.is_blocked(client_ip):
+        raise HTTPException(status_code=429, detail="IP bloqueado por muitas tentativas. Tente em 15 minutos.")
+    if not rate_limiter.check_rate_limit(client_ip, limit=20, window=60):
+        raise HTTPException(status_code=429, detail="Muitas requisições. Aguarde um momento.")
+    
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
     if not user or not verify_password(credentials.password, user["password_hash"]):
+        # Record failed login attempt
+        if rate_limiter.record_failed_login(client_ip):
+            raise HTTPException(status_code=429, detail="Muitas tentativas de login. IP bloqueado por 15 minutos.")
         raise HTTPException(status_code=401, detail="Email ou senha inválidos")
+    
+    # Reset failed login counter on successful login
+    rate_limiter.reset_failed_logins(client_ip)
     
     # Check user status
     status = user.get("status", "active")
