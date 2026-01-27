@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, BackgroundTasks, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -7,7 +7,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional
+from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
@@ -17,6 +17,10 @@ import paramiko
 import io
 import asyncio
 from enum import Enum
+from collections import defaultdict
+import time
+import hashlib
+import secrets
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -33,6 +37,56 @@ JWT_EXPIRATION = 24 * 60  # 24 hours in minutes
 
 # Encryption for sensitive data (SSH passwords/keys)
 ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key().decode())
+
+# ============ SECURITY: Rate Limiting ============
+class RateLimiter:
+    def __init__(self):
+        self.requests: Dict[str, list] = defaultdict(list)
+        self.blocked_ips: Dict[str, float] = {}
+        self.failed_logins: Dict[str, int] = defaultdict(int)
+    
+    def is_blocked(self, ip: str) -> bool:
+        if ip in self.blocked_ips:
+            if time.time() < self.blocked_ips[ip]:
+                return True
+            else:
+                del self.blocked_ips[ip]
+        return False
+    
+    def block_ip(self, ip: str, duration: int = 300):  # 5 minutes default
+        self.blocked_ips[ip] = time.time() + duration
+    
+    def check_rate_limit(self, ip: str, limit: int = 100, window: int = 60) -> bool:
+        """Check if IP has exceeded rate limit. Returns True if allowed."""
+        now = time.time()
+        self.requests[ip] = [t for t in self.requests[ip] if now - t < window]
+        
+        if len(self.requests[ip]) >= limit:
+            return False
+        
+        self.requests[ip].append(now)
+        return True
+    
+    def record_failed_login(self, ip: str) -> bool:
+        """Record failed login attempt. Returns True if should block."""
+        self.failed_logins[ip] += 1
+        if self.failed_logins[ip] >= 5:  # 5 failed attempts
+            self.block_ip(ip, 900)  # Block for 15 minutes
+            self.failed_logins[ip] = 0
+            return True
+        return False
+    
+    def reset_failed_logins(self, ip: str):
+        self.failed_logins[ip] = 0
+
+rate_limiter = RateLimiter()
+
+def get_client_ip(request: Request) -> str:
+    """Get real client IP, handling proxies."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 fernet = Fernet(ENCRYPTION_KEY.encode() if isinstance(ENCRYPTION_KEY, str) else ENCRYPTION_KEY)
 
 app = FastAPI(title="Deploy Git to VPS")
