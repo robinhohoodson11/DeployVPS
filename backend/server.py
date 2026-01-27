@@ -753,6 +753,132 @@ async def get_admin_stats(admin: dict = Depends(require_admin)):
         "admin_users": admin_users
     }
 
+# ============ VPS SECURITY ============
+
+@api_router.get("/vps/{vps_id}/security")
+async def check_vps_security(vps_id: str, admin: dict = Depends(require_admin)):
+    """Check security status of a VPS"""
+    vps = await db.vps.find_one({"id": vps_id, "user_id": admin["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    try:
+        ssh = get_ssh_client(vps)
+        security_report = {
+            "vps_name": vps["name"],
+            "host": vps["host"],
+            "checks": [],
+            "score": 0,
+            "max_score": 5
+        }
+        
+        # Check 1: Firewall (UFW)
+        stdin, stdout, stderr = ssh.exec_command("ufw status 2>/dev/null | head -1")
+        ufw_status = stdout.read().decode().strip()
+        if "active" in ufw_status.lower():
+            security_report["checks"].append({"name": "Firewall (UFW)", "status": "✅ Ativo", "ok": True})
+            security_report["score"] += 1
+        else:
+            security_report["checks"].append({"name": "Firewall (UFW)", "status": "❌ Inativo", "ok": False, "fix": "ufw enable"})
+        
+        # Check 2: Fail2ban
+        stdin, stdout, stderr = ssh.exec_command("systemctl is-active fail2ban 2>/dev/null")
+        f2b_status = stdout.read().decode().strip()
+        if f2b_status == "active":
+            security_report["checks"].append({"name": "Fail2ban", "status": "✅ Ativo", "ok": True})
+            security_report["score"] += 1
+        else:
+            security_report["checks"].append({"name": "Fail2ban", "status": "❌ Inativo", "ok": False, "fix": "apt install fail2ban && systemctl enable fail2ban"})
+        
+        # Check 3: SSH Root Login
+        stdin, stdout, stderr = ssh.exec_command("grep -E '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null | head -1")
+        root_login = stdout.read().decode().strip()
+        if "no" in root_login.lower() or "prohibit-password" in root_login.lower():
+            security_report["checks"].append({"name": "SSH Root Login", "status": "✅ Desabilitado/Restrito", "ok": True})
+            security_report["score"] += 1
+        else:
+            security_report["checks"].append({"name": "SSH Root Login", "status": "⚠️ Permitido", "ok": False, "fix": "Editar /etc/ssh/sshd_config: PermitRootLogin no"})
+        
+        # Check 4: SSH Key Authentication
+        stdin, stdout, stderr = ssh.exec_command("grep -E '^PubkeyAuthentication' /etc/ssh/sshd_config 2>/dev/null | head -1")
+        pubkey = stdout.read().decode().strip()
+        if "yes" in pubkey.lower() or pubkey == "":
+            security_report["checks"].append({"name": "SSH Key Auth", "status": "✅ Habilitado", "ok": True})
+            security_report["score"] += 1
+        else:
+            security_report["checks"].append({"name": "SSH Key Auth", "status": "❌ Desabilitado", "ok": False})
+        
+        # Check 5: Disk Space
+        stdin, stdout, stderr = ssh.exec_command("df / --output=pcent | tail -1 | tr -d ' %'")
+        disk = stdout.read().decode().strip()
+        try:
+            disk_pct = int(disk)
+            if disk_pct < 80:
+                security_report["checks"].append({"name": "Espaço em Disco", "status": f"✅ {disk_pct}% usado", "ok": True})
+                security_report["score"] += 1
+            else:
+                security_report["checks"].append({"name": "Espaço em Disco", "status": f"⚠️ {disk_pct}% usado", "ok": False})
+        except:
+            security_report["checks"].append({"name": "Espaço em Disco", "status": "❓ Não verificado", "ok": False})
+        
+        ssh.close()
+        
+        # Calculate grade
+        pct = (security_report["score"] / security_report["max_score"]) * 100
+        if pct >= 80:
+            security_report["grade"] = "A"
+        elif pct >= 60:
+            security_report["grade"] = "B"
+        elif pct >= 40:
+            security_report["grade"] = "C"
+        else:
+            security_report["grade"] = "D"
+        
+        return security_report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to check security: {str(e)}")
+
+@api_router.post("/vps/{vps_id}/security/harden")
+async def harden_vps_security(vps_id: str, admin: dict = Depends(require_admin)):
+    """Apply basic security hardening to a VPS"""
+    vps = await db.vps.find_one({"id": vps_id, "user_id": admin["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    try:
+        ssh = get_ssh_client(vps)
+        actions = []
+        
+        # Install and enable fail2ban
+        stdin, stdout, stderr = ssh.exec_command("apt-get update && apt-get install -y fail2ban && systemctl enable fail2ban && systemctl start fail2ban 2>&1")
+        stdout.channel.recv_exit_status()
+        actions.append("Fail2ban instalado e habilitado")
+        
+        # Configure UFW (allow SSH, HTTP, HTTPS)
+        ssh.exec_command("ufw allow 22/tcp")
+        ssh.exec_command("ufw allow 80/tcp")
+        ssh.exec_command("ufw allow 443/tcp")
+        # Allow deployment ports range
+        ssh.exec_command("ufw allow 3000:5000/tcp")
+        ssh.exec_command("ufw allow 27017:28000/tcp")  # MongoDB range
+        stdin, stdout, stderr = ssh.exec_command("echo 'y' | ufw enable 2>&1")
+        stdout.channel.recv_exit_status()
+        actions.append("Firewall UFW configurado e habilitado")
+        
+        # Clean up old packages
+        ssh.exec_command("apt-get autoremove -y 2>/dev/null")
+        actions.append("Pacotes não utilizados removidos")
+        
+        ssh.close()
+        
+        return {
+            "message": "Security hardening applied",
+            "actions": actions,
+            "note": "Recomenda-se também: desabilitar login root SSH e usar chave SSH em vez de senha"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to harden security: {str(e)}")
+
 # ============ VPS ROUTES ============
 
 @api_router.post("/vps", response_model=VPSResponse)
