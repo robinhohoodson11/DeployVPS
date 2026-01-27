@@ -1949,6 +1949,21 @@ async def configure_ssl(deployment_id: str, user: dict = Depends(get_current_use
                 ssh.exec_command(f"a2ensite {domain}-le-ssl.conf 2>/dev/null")
                 ssh.exec_command("apache2ctl configtest && systemctl reload apache2")
                 
+                # Auto-fix frontend to use HTTPS domain instead of HTTP IP for API calls
+                if deploy_type == "fullstack":
+                    await add_deployment_log(deployment_id, f"🔧 Updating frontend to use HTTPS domain for API calls...", "info")
+                    vps_host = vps["host"]
+                    fix_cmd = f"""
+docker exec frontend_{project_name} sh -c '
+cd /usr/share/nginx/html/static/js/
+for file in main.*.js; do
+  sed -i "s|http://{vps_host}:{backend_port}|https://{domain}|g" $file 2>/dev/null
+done
+' 2>/dev/null
+"""
+                    ssh.exec_command(fix_cmd)
+                    await add_deployment_log(deployment_id, f"✅ Frontend updated to use https://{domain}", "success")
+                
                 await add_deployment_log(deployment_id, f"SSL/HTTPS configured successfully for {domain}", "success")
                 ssh.close()
                 return {"message": "SSL configured successfully", "domain": domain, "https_url": f"https://{domain}"}
