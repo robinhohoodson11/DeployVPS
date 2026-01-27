@@ -1852,6 +1852,7 @@ async def configure_ssl(deployment_id: str, user: dict = Depends(get_current_use
     backend_port = deployment.get("backend_port", port + 1000)
     deploy_type = deployment.get("deploy_type", "static")
     web_server = deployment.get("web_server", "nginx")
+    project_name = deployment["project_name"]
     
     try:
         ssh = get_ssh_client(vps)
