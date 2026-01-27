@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { toast } from "sonner";
-import { Plus, Server, Trash2, CheckCircle, XCircle, Loader2, Wifi } from "lucide-react";
+import { Plus, Server, Trash2, CheckCircle, XCircle, Loader2, Wifi, Shield, ShieldCheck, ShieldAlert } from "lucide-react";
 import Header from "../components/Header";
 
 export default function VPSManagement() {
@@ -30,6 +30,10 @@ export default function VPSManagement() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [testingVps, setTestingVps] = useState(null);
+  const [checkingSecurity, setCheckingSecurity] = useState(null);
+  const [hardeningVps, setHardeningVps] = useState(null);
+  const [securityReport, setSecurityReport] = useState(null);
+  const [securityDialogOpen, setSecurityDialogOpen] = useState(false);
   
   const [form, setForm] = useState({
     name: "",
