@@ -118,6 +118,37 @@ export default function VPSManagement() {
     }
   };
 
+  const handleCheckSecurity = async (id) => {
+    setCheckingSecurity(id);
+    try {
+      const response = await api.get(`/vps/${id}/security`);
+      setSecurityReport(response.data);
+      setSecurityDialogOpen(true);
+    } catch (error) {
+      toast.error("Erro ao verificar segurança");
+    } finally {
+      setCheckingSecurity(null);
+    }
+  };
+
+  const handleHardenSecurity = async (id) => {
+    if (!window.confirm("Isso irá instalar Fail2ban e configurar o Firewall. Deseja continuar?")) return;
+    
+    setHardeningVps(id);
+    try {
+      const response = await api.post(`/vps/${id}/security/harden`);
+      toast.success("Segurança reforçada!", {
+        description: response.data.actions.join(", ")
+      });
+      // Refresh security report
+      handleCheckSecurity(id);
+    } catch (error) {
+      toast.error("Erro ao reforçar segurança");
+    } finally {
+      setHardeningVps(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#09090b]">
       <Header />
