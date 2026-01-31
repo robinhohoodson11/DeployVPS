@@ -227,6 +227,21 @@ export default function DeploymentDetails() {
     }
   };
 
+  const handleCancelDeploy = async () => {
+    if (!window.confirm("Cancelar o deploy em andamento? O processo será interrompido.")) return;
+    
+    setActionLoading("cancel");
+    try {
+      await api.post(`/deployments/${id}/cancel`);
+      toast.success("Deploy cancelado");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao cancelar deploy");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleStop = async () => {
     setActionLoading("stop");
     try {
