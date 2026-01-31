@@ -29,16 +29,20 @@ export default function NewDeployment() {
     repo_url: "",
     branch: "main",
     project_name: "",
+    base_port: 3000,
     port: 3000,
     backend_port: 4000,
+    mongodb_port: 27017,
     github_token: "",
     env_vars: "",
     create_mongodb: false,
-    mongodb_port: 27017,
     create_admin: false,
     admin_email: "admin@admin.com",
     admin_password: "Admin@123",
   });
+  
+  const [suggestedPorts, setSuggestedPorts] = useState(null);
+  const [loadingPorts, setLoadingPorts] = useState(false);
 
   useEffect(() => {
     const fetchVPS = async () => {
