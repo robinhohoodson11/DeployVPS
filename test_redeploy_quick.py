@@ -8,7 +8,7 @@ import json
 
 def test_redeploy_api():
     """Test redeploy API endpoint structure and responses"""
-    base_url = "https://deploy-genius-5.preview.emergentagent.com"
+    base_url = "https://appdeployer-1.preview.emergentagent.com"
     api_url = f"{base_url}/api"
     
     print("🚀 Testing Redeploy API Endpoint")
