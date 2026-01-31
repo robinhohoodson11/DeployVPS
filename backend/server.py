@@ -840,7 +840,7 @@ async def check_vps_security(vps_id: str, admin: dict = Depends(require_admin)):
 
 @api_router.post("/vps/{vps_id}/security/harden")
 async def harden_vps_security(vps_id: str, admin: dict = Depends(require_admin)):
-    """Apply basic security hardening to a VPS"""
+    """Apply basic security hardening to a VPS - only applies fixes for items that are not already configured"""
     vps = await db.vps.find_one({"id": vps_id, "user_id": admin["id"]}, {"_id": 0})
     if not vps:
         raise HTTPException(status_code=404, detail="VPS not found")
@@ -848,32 +848,49 @@ async def harden_vps_security(vps_id: str, admin: dict = Depends(require_admin))
     try:
         ssh = get_ssh_client(vps)
         actions = []
+        skipped = []
         
-        # Install and enable fail2ban
-        stdin, stdout, stderr = ssh.exec_command("apt-get update && apt-get install -y fail2ban && systemctl enable fail2ban && systemctl start fail2ban 2>&1")
-        stdout.channel.recv_exit_status()
-        actions.append("Fail2ban instalado e habilitado")
+        # Check and install fail2ban only if not active
+        stdin, stdout, stderr = ssh.exec_command("systemctl is-active fail2ban 2>/dev/null")
+        f2b_status = stdout.read().decode().strip()
+        if f2b_status != "active":
+            stdin, stdout, stderr = ssh.exec_command("apt-get update && apt-get install -y fail2ban && systemctl enable fail2ban && systemctl start fail2ban 2>&1")
+            stdout.channel.recv_exit_status()
+            actions.append("Fail2ban instalado e habilitado")
+        else:
+            skipped.append("Fail2ban já está ativo")
         
-        # Configure UFW (allow SSH, HTTP, HTTPS)
-        ssh.exec_command("ufw allow 22/tcp")
-        ssh.exec_command("ufw allow 80/tcp")
-        ssh.exec_command("ufw allow 443/tcp")
-        # Allow deployment ports range
-        ssh.exec_command("ufw allow 3000:5000/tcp")
-        ssh.exec_command("ufw allow 27017:28000/tcp")  # MongoDB range
-        stdin, stdout, stderr = ssh.exec_command("echo 'y' | ufw enable 2>&1")
-        stdout.channel.recv_exit_status()
-        actions.append("Firewall UFW configurado e habilitado")
+        # Check and configure UFW only if not active
+        stdin, stdout, stderr = ssh.exec_command("ufw status 2>/dev/null | head -1")
+        ufw_status = stdout.read().decode().strip()
+        if "active" not in ufw_status.lower():
+            ssh.exec_command("ufw allow 22/tcp")
+            ssh.exec_command("ufw allow 80/tcp")
+            ssh.exec_command("ufw allow 443/tcp")
+            ssh.exec_command("ufw allow 3000:5000/tcp")
+            ssh.exec_command("ufw allow 27017:28000/tcp")
+            stdin, stdout, stderr = ssh.exec_command("echo 'y' | ufw enable 2>&1")
+            stdout.channel.recv_exit_status()
+            actions.append("Firewall UFW configurado e habilitado")
+        else:
+            skipped.append("Firewall UFW já está ativo")
         
-        # Clean up old packages
+        # Clean up old packages (always safe to run)
         ssh.exec_command("apt-get autoremove -y 2>/dev/null")
-        actions.append("Pacotes não utilizados removidos")
+        actions.append("Limpeza de pacotes não utilizados executada")
         
         ssh.close()
         
+        # Build response message based on what was done
+        if len(actions) == 1 and "Limpeza" in actions[0]:
+            message = "Segurança já está configurada corretamente"
+        else:
+            message = "Hardening de segurança aplicado"
+        
         return {
-            "message": "Security hardening applied",
+            "message": message,
             "actions": actions,
+            "skipped": skipped,
             "note": "Recomenda-se também: desabilitar login root SSH e usar chave SSH em vez de senha"
         }
     except Exception as e:
