@@ -420,6 +420,41 @@ export default function DeploymentDetails() {
     }
   };
 
+  const handleImportBackup = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.name.endsWith('.gz')) {
+      toast.error("Selecione um arquivo de backup válido (.gz)");
+      return;
+    }
+    
+    if (!window.confirm("Importar e restaurar este backup? Os dados atuais serão substituídos.")) {
+      event.target.value = '';
+      return;
+    }
+    
+    setBackupLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await api.post(`/deployments/${id}/backups/import`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      toast.success("Backup importado e restaurado!", {
+        description: response.data.backup.filename
+      });
+      fetchBackups();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao importar backup");
+    } finally {
+      setBackupLoading(false);
+      event.target.value = '';
+    }
+  };
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success("Copiado!");
