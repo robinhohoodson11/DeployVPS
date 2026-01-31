@@ -2246,8 +2246,10 @@ async def get_container_logs(deployment_id: str, user: dict = Depends(get_curren
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
     
-    if deployment["status"] != DeployStatus.RUNNING:
-        return {"logs": deployment.get("logs", []), "container_logs": []}
+    # Only fetch container logs if deployment is RUNNING (not during build)
+    # This prevents blocking the interface during deploy/redeploy
+    if deployment["status"] not in [DeployStatus.RUNNING, "running"]:
+        return {"logs": deployment.get("logs", []), "container_logs": [], "status": deployment["status"]}
     
     vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
     if not vps:
