@@ -328,7 +328,12 @@ export default function NewDeployment() {
                     <Checkbox
                       id="create_mongodb"
                       checked={form.create_mongodb}
-                      onCheckedChange={(checked) => setForm({ ...form, create_mongodb: checked })}
+                      onCheckedChange={(checked) => {
+                        setForm({ ...form, create_mongodb: checked });
+                        if (checked && form.vps_id) {
+                          fetchAvailablePorts(form.vps_id, form.base_port);
+                        }
+                      }}
                       data-testid="create-mongodb-checkbox"
                       className="border-zinc-600 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                     />
@@ -342,55 +347,65 @@ export default function NewDeployment() {
                   
                   {form.create_mongodb && (
                     <div className="ml-6 space-y-4 border-l-2 border-green-500/30 pl-4">
-                      <p className="text-xs text-zinc-500">
-                        Configure as portas para cada serviço. Certifique-se de usar portas diferentes e não utilizadas.
-                      </p>
-                      
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-zinc-400 text-sm">Porta Frontend</Label>
+                      <div className="space-y-2">
+                        <Label className="text-zinc-400 text-sm">Porta Base</Label>
+                        <div className="flex items-center gap-3">
                           <Input
                             type="number"
                             placeholder="3000"
-                            value={form.port}
-                            onChange={(e) => setForm({ ...form, port: parseInt(e.target.value) })}
-                            required
-                            data-testid="frontend-port-input"
-                            className="bg-zinc-800/50 border-zinc-700 font-mono"
+                            value={form.base_port}
+                            onChange={(e) => setForm({ ...form, base_port: parseInt(e.target.value) })}
+                            data-testid="base-port-input"
+                            className="bg-zinc-800/50 border-zinc-700 font-mono w-28"
                           />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchAvailablePorts(form.vps_id, form.base_port)}
+                            disabled={loadingPorts || !form.vps_id}
+                            className="border-zinc-700"
+                          >
+                            {loadingPorts ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : (
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                            )}
+                            Verificar Portas
+                          </Button>
                         </div>
-                        
-                        <div className="space-y-2">
-                          <Label className="text-zinc-400 text-sm">Porta Backend</Label>
-                          <Input
-                            type="number"
-                            placeholder="4000"
-                            value={form.backend_port}
-                            onChange={(e) => setForm({ ...form, backend_port: parseInt(e.target.value) })}
-                            required
-                            data-testid="backend-port-input"
-                            className="bg-zinc-800/50 border-zinc-700 font-mono"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label className="text-zinc-400 text-sm">Porta MongoDB</Label>
-                          <Input
-                            type="number"
-                            placeholder="27017"
-                            value={form.mongodb_port}
-                            onChange={(e) => setForm({ ...form, mongodb_port: parseInt(e.target.value) })}
-                            data-testid="mongodb-port-input"
-                            className="bg-zinc-800/50 border-zinc-700 font-mono"
-                          />
-                        </div>
+                        <p className="text-xs text-zinc-500">
+                          O sistema buscará automaticamente portas disponíveis a partir desta base
+                        </p>
                       </div>
                       
-                      <div className="bg-zinc-800/50 rounded p-3 text-xs text-zinc-500">
-                        <p className="font-medium text-zinc-400 mb-1">💡 Dica de portas:</p>
-                        <p>• Frontend: 3000-3999 (ex: 3000, 3100, 3200)</p>
-                        <p>• Backend: 4000-4999 (ex: 4000, 4100, 4200)</p>
-                        <p>• MongoDB: 27017-28000 (ex: 27017, 27117, 27217)</p>
+                      {/* Suggested Ports Display */}
+                      <div className="bg-zinc-800/50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-zinc-400 font-medium">Portas Selecionadas:</span>
+                          {loadingPorts && <Loader2 className="w-4 h-4 animate-spin text-green-500" />}
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="bg-zinc-900 rounded p-3 text-center">
+                            <p className="text-xs text-zinc-500 mb-1">Frontend</p>
+                            <p className="text-lg font-mono text-green-500">{form.port}</p>
+                          </div>
+                          <div className="bg-zinc-900 rounded p-3 text-center">
+                            <p className="text-xs text-zinc-500 mb-1">Backend</p>
+                            <p className="text-lg font-mono text-blue-500">{form.backend_port}</p>
+                          </div>
+                          <div className="bg-zinc-900 rounded p-3 text-center">
+                            <p className="text-xs text-zinc-500 mb-1">MongoDB</p>
+                            <p className="text-lg font-mono text-yellow-500">{form.mongodb_port}</p>
+                          </div>
+                        </div>
+                        
+                        {suggestedPorts && (
+                          <p className="text-xs text-green-500 text-center">
+                            ✓ Portas verificadas e disponíveis no VPS
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
