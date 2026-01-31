@@ -299,26 +299,63 @@ export default function NewDeployment() {
                     <div className="flex items-center gap-2">
                       <Database className="w-4 h-4 text-green-500" />
                       <Label htmlFor="create_mongodb" className="text-zinc-300 cursor-pointer">
-                        Criar banco MongoDB na VPS
+                        Deploy Fullstack (com MongoDB)
                       </Label>
                     </div>
                   </div>
                   
                   {form.create_mongodb && (
-                    <div className="ml-6 space-y-2">
-                      <Label className="text-zinc-400 text-sm">Porta do MongoDB</Label>
-                      <Input
-                        type="number"
-                        placeholder="27017"
-                        value={form.mongodb_port}
-                        onChange={(e) => setForm({ ...form, mongodb_port: parseInt(e.target.value) })}
-                        data-testid="mongodb-port-input"
-                        className="bg-zinc-800/50 border-zinc-700 font-mono w-32"
-                      />
+                    <div className="ml-6 space-y-4 border-l-2 border-green-500/30 pl-4">
                       <p className="text-xs text-zinc-500">
-                        O MongoDB será criado como container Docker na sua VPS com dados persistentes.
-                        As variáveis MONGO_URL, MONGODB_URL e DATABASE_URL serão configuradas automaticamente.
+                        Configure as portas para cada serviço. Certifique-se de usar portas diferentes e não utilizadas.
                       </p>
+                      
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-zinc-400 text-sm">Porta Frontend</Label>
+                          <Input
+                            type="number"
+                            placeholder="3000"
+                            value={form.port}
+                            onChange={(e) => setForm({ ...form, port: parseInt(e.target.value) })}
+                            required
+                            data-testid="frontend-port-input"
+                            className="bg-zinc-800/50 border-zinc-700 font-mono"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-zinc-400 text-sm">Porta Backend</Label>
+                          <Input
+                            type="number"
+                            placeholder="4000"
+                            value={form.backend_port}
+                            onChange={(e) => setForm({ ...form, backend_port: parseInt(e.target.value) })}
+                            required
+                            data-testid="backend-port-input"
+                            className="bg-zinc-800/50 border-zinc-700 font-mono"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-zinc-400 text-sm">Porta MongoDB</Label>
+                          <Input
+                            type="number"
+                            placeholder="27017"
+                            value={form.mongodb_port}
+                            onChange={(e) => setForm({ ...form, mongodb_port: parseInt(e.target.value) })}
+                            data-testid="mongodb-port-input"
+                            className="bg-zinc-800/50 border-zinc-700 font-mono"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-zinc-800/50 rounded p-3 text-xs text-zinc-500">
+                        <p className="font-medium text-zinc-400 mb-1">💡 Dica de portas:</p>
+                        <p>• Frontend: 3000-3999 (ex: 3000, 3100, 3200)</p>
+                        <p>• Backend: 4000-4999 (ex: 4000, 4100, 4200)</p>
+                        <p>• MongoDB: 27017-28000 (ex: 27017, 27117, 27217)</p>
+                      </div>
                     </div>
                   )}
                 </div>
