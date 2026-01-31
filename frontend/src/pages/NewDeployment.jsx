@@ -30,6 +30,7 @@ export default function NewDeployment() {
     branch: "main",
     project_name: "",
     port: 3000,
+    backend_port: 4000,
     github_token: "",
     env_vars: "",
     create_mongodb: false,
