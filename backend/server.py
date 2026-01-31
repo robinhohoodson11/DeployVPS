@@ -2299,6 +2299,266 @@ async def remove_domain(deployment_id: str, user: dict = Depends(get_current_use
     await db.deployments.update_one({"id": deployment_id}, {"$set": {"domain": None, "web_server": None}})
     return {"message": "Domain removed"}
 
+# ============ MONGODB BACKUP ============
+
+BACKUP_BASE_PATH = "/var/backups/deployvps"
+
+class BackupSettings(BaseModel):
+    auto_backup_enabled: bool = False
+    auto_backup_interval_hours: int = 24  # Default: daily
+    max_backups: int = 5
+
+@api_router.get("/deployments/{deployment_id}/backups")
+async def list_backups(deployment_id: str, user: dict = Depends(get_current_user)):
+    """List all backups for a deployment's MongoDB database"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    if deployment.get("deploy_type") != "fullstack":
+        raise HTTPException(status_code=400, detail="Backups só estão disponíveis para deploys fullstack com MongoDB")
+    
+    vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    try:
+        ssh = get_ssh_client(vps)
+        project_name = deployment['project_name']
+        backup_path = f"{BACKUP_BASE_PATH}/{project_name}"
+        
+        # List backup files
+        stdin, stdout, stderr = ssh.exec_command(f"ls -la {backup_path}/*.gz 2>/dev/null | awk '{{print $5, $6, $7, $8, $9}}'")
+        output = stdout.read().decode().strip()
+        ssh.close()
+        
+        backups = []
+        if output:
+            for line in output.split("\n"):
+                if line.strip():
+                    parts = line.split()
+                    if len(parts) >= 5:
+                        size_bytes = int(parts[0])
+                        filename = parts[-1].split("/")[-1]
+                        # Parse backup name: backup_YYYYMMDD_HHMMSS.gz
+                        backup_id = filename.replace("backup_", "").replace(".gz", "")
+                        backups.append({
+                            "id": backup_id,
+                            "filename": filename,
+                            "size": f"{size_bytes / (1024*1024):.2f} MB" if size_bytes > 1024*1024 else f"{size_bytes / 1024:.2f} KB",
+                            "size_bytes": size_bytes,
+                            "created_at": f"{parts[1]} {parts[2]} {parts[3]}"
+                        })
+        
+        # Get backup settings
+        settings = deployment.get("backup_settings", {
+            "auto_backup_enabled": False,
+            "auto_backup_interval_hours": 24,
+            "max_backups": 5
+        })
+        
+        return {
+            "backups": sorted(backups, key=lambda x: x["id"], reverse=True),
+            "settings": settings,
+            "backup_path": backup_path
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao listar backups: {str(e)}")
+
+@api_router.post("/deployments/{deployment_id}/backups")
+async def create_backup(deployment_id: str, user: dict = Depends(get_current_user)):
+    """Create a manual backup of the deployment's MongoDB database"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    if deployment.get("deploy_type") != "fullstack":
+        raise HTTPException(status_code=400, detail="Backups só estão disponíveis para deploys fullstack com MongoDB")
+    
+    vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    try:
+        ssh = get_ssh_client(vps)
+        project_name = deployment['project_name']
+        mongo_port = deployment.get("mongodb_port", 27017)
+        backup_path = f"{BACKUP_BASE_PATH}/{project_name}"
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        backup_file = f"backup_{timestamp}.gz"
+        
+        # Create backup directory if not exists
+        ssh.exec_command(f"mkdir -p {backup_path}")
+        
+        # Create backup using mongodump from the MongoDB container
+        mongo_container = f"mongodb_{project_name}"
+        dump_cmd = f"docker exec {mongo_container} mongodump --archive --gzip 2>/dev/null > {backup_path}/{backup_file}"
+        
+        stdin, stdout, stderr = ssh.exec_command(dump_cmd)
+        exit_status = stdout.channel.recv_exit_status()
+        
+        if exit_status != 0:
+            error = stderr.read().decode()
+            ssh.close()
+            raise HTTPException(status_code=500, detail=f"Erro ao criar backup: {error}")
+        
+        # Get backup size
+        stdin, stdout, stderr = ssh.exec_command(f"ls -la {backup_path}/{backup_file} | awk '{{print $5}}'")
+        size = stdout.read().decode().strip()
+        
+        # Cleanup old backups (keep only max_backups)
+        max_backups = deployment.get("backup_settings", {}).get("max_backups", 5)
+        ssh.exec_command(f"cd {backup_path} && ls -t *.gz 2>/dev/null | tail -n +{max_backups + 1} | xargs rm -f 2>/dev/null")
+        
+        ssh.close()
+        
+        return {
+            "message": "Backup criado com sucesso",
+            "backup": {
+                "id": timestamp,
+                "filename": backup_file,
+                "size": f"{int(size) / (1024*1024):.2f} MB" if int(size) > 1024*1024 else f"{int(size) / 1024:.2f} KB",
+                "path": f"{backup_path}/{backup_file}"
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar backup: {str(e)}")
+
+@api_router.post("/deployments/{deployment_id}/backups/{backup_id}/restore")
+async def restore_backup(deployment_id: str, backup_id: str, user: dict = Depends(get_current_user)):
+    """Restore MongoDB database from a backup"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    try:
+        ssh = get_ssh_client(vps)
+        project_name = deployment['project_name']
+        backup_path = f"{BACKUP_BASE_PATH}/{project_name}"
+        backup_file = f"backup_{backup_id}.gz"
+        
+        # Check if backup exists
+        stdin, stdout, stderr = ssh.exec_command(f"test -f {backup_path}/{backup_file} && echo 'exists'")
+        if "exists" not in stdout.read().decode():
+            ssh.close()
+            raise HTTPException(status_code=404, detail="Backup não encontrado")
+        
+        # Restore backup using mongorestore
+        mongo_container = f"mongodb_{project_name}"
+        restore_cmd = f"cat {backup_path}/{backup_file} | docker exec -i {mongo_container} mongorestore --archive --gzip --drop 2>&1"
+        
+        stdin, stdout, stderr = ssh.exec_command(restore_cmd)
+        output = stdout.read().decode()
+        exit_status = stdout.channel.recv_exit_status()
+        
+        ssh.close()
+        
+        if exit_status != 0:
+            raise HTTPException(status_code=500, detail=f"Erro ao restaurar backup: {output}")
+        
+        return {"message": "Backup restaurado com sucesso", "backup_id": backup_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao restaurar backup: {str(e)}")
+
+@api_router.delete("/deployments/{deployment_id}/backups/{backup_id}")
+async def delete_backup(deployment_id: str, backup_id: str, user: dict = Depends(get_current_user)):
+    """Delete a specific backup"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    try:
+        ssh = get_ssh_client(vps)
+        project_name = deployment['project_name']
+        backup_path = f"{BACKUP_BASE_PATH}/{project_name}"
+        backup_file = f"backup_{backup_id}.gz"
+        
+        ssh.exec_command(f"rm -f {backup_path}/{backup_file}")
+        ssh.close()
+        
+        return {"message": "Backup removido"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao remover backup: {str(e)}")
+
+@api_router.get("/deployments/{deployment_id}/backups/{backup_id}/download")
+async def download_backup(deployment_id: str, backup_id: str, user: dict = Depends(get_current_user)):
+    """Get backup file for download (returns file content via SSH)"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    try:
+        ssh = get_ssh_client(vps)
+        project_name = deployment['project_name']
+        backup_path = f"{BACKUP_BASE_PATH}/{project_name}"
+        backup_file = f"backup_{backup_id}.gz"
+        full_path = f"{backup_path}/{backup_file}"
+        
+        # Check if backup exists
+        stdin, stdout, stderr = ssh.exec_command(f"test -f {full_path} && echo 'exists'")
+        if "exists" not in stdout.read().decode():
+            ssh.close()
+            raise HTTPException(status_code=404, detail="Backup não encontrado")
+        
+        # Get file content via SFTP
+        sftp = ssh.open_sftp()
+        import io
+        file_buffer = io.BytesIO()
+        sftp.getfo(full_path, file_buffer)
+        file_buffer.seek(0)
+        sftp.close()
+        ssh.close()
+        
+        from fastapi.responses import StreamingResponse
+        return StreamingResponse(
+            file_buffer,
+            media_type="application/gzip",
+            headers={"Content-Disposition": f"attachment; filename={backup_file}"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao baixar backup: {str(e)}")
+
+@api_router.put("/deployments/{deployment_id}/backups/settings")
+async def update_backup_settings(deployment_id: str, settings: BackupSettings, user: dict = Depends(get_current_user)):
+    """Update backup settings for a deployment"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    if deployment.get("deploy_type") != "fullstack":
+        raise HTTPException(status_code=400, detail="Backups só estão disponíveis para deploys fullstack com MongoDB")
+    
+    # Validate interval
+    if settings.auto_backup_interval_hours < 1:
+        raise HTTPException(status_code=400, detail="Intervalo mínimo é 1 hora")
+    if settings.max_backups < 1 or settings.max_backups > 20:
+        raise HTTPException(status_code=400, detail="Número de backups deve ser entre 1 e 20")
+    
+    await db.deployments.update_one(
+        {"id": deployment_id},
+        {"$set": {"backup_settings": settings.dict()}}
+    )
+    
+    return {"message": "Configurações atualizadas", "settings": settings.dict()}
+
 # ============ LIVE LOGS ============
 
 @api_router.get("/deployments/{deployment_id}/logs")
