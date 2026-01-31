@@ -18,6 +18,9 @@ Sistema para automatizar o deploy de aplicações web de repositórios GitHub pa
 8. ✅ Visualizador de logs estilo Emergent
 9. ✅ Verificação e hardening de segurança VPS
 10. ✅ Landing page otimizada para SEO
+11. ✅ Sistema de Backup MongoDB (manual + automático)
+12. ✅ Cancelar deploy em andamento
+13. ✅ Aviso ao sair durante deploy ativo
 
 ## Tech Stack
 - **Frontend**: React + TailwindCSS + Shadcn/UI
@@ -31,7 +34,7 @@ Sistema para automatizar o deploy de aplicações web de repositórios GitHub pa
 /app
 ├── backend/
 │   ├── .env          # MONGO_URL, JWT_SECRET
-│   └── server.py     # API monolítica (2500+ linhas - precisa refatorar)
+│   └── server.py     # API monolítica (2700+ linhas - precisa refatorar)
 ├── frontend/
 │   ├── public/       # index.html, robots.txt, sitemap.xml
 │   └── src/
@@ -43,6 +46,7 @@ Sistema para automatizar o deploy de aplicações web de repositórios GitHub pa
 - `POST /api/auth/login` - Login
 - `POST /api/deployments` - Criar deploy
 - `POST /api/deployments/{id}/redeploy` - Redeploy
+- `POST /api/deployments/{id}/cancel` - Cancelar deploy em andamento
 - `DELETE /api/deployments/{id}` - Deletar deploy
 - `GET /api/deployments/{id}/logs` - Logs
 - `POST /api/deployments/{id}/domain` - Configurar domínio
@@ -50,28 +54,41 @@ Sistema para automatizar o deploy de aplicações web de repositórios GitHub pa
 - `GET /api/vps/{id}/security` - Check segurança
 - `POST /api/vps/{id}/security/harden` - Hardening
 
+### Backup Endpoints (NEW)
+- `GET /api/deployments/{id}/backups` - Listar backups
+- `POST /api/deployments/{id}/backups` - Criar backup
+- `POST /api/deployments/{id}/backups/{backup_id}/restore` - Restaurar
+- `GET /api/deployments/{id}/backups/{backup_id}/download` - Baixar
+- `DELETE /api/deployments/{id}/backups/{backup_id}` - Excluir
+- `PUT /api/deployments/{id}/backups/settings` - Configurações
+
 ## Prioritized Backlog
 
 ### P0 (Critical)
-- [ ] Fazer novo deploy do projeto `saasv6` (dados perdidos)
-- [ ] Testar responsividade da UI durante deploys longos
+- (none)
 
 ### P1 (High)
 - [ ] Finalizar SEO com domínio definitivo (substituir `deployvps.com`)
-- [ ] Criar imagem Open Graph (1200x630px)
+- [ ] Implementar cronjob para backups automáticos no VPS
 
 ### P2 (Medium)
+- [ ] Criar imagem Open Graph (1200x630px)
 - [ ] Refatorar server.py em módulos (routers/, services/)
-- [ ] Adicionar histórico de ações de segurança
+- [ ] Notificações por email para falhas de backup
 
 ### P3 (Low)
 - [ ] Desabilitar login root SSH automaticamente (com confirmação)
 - [ ] Suporte a múltiplos repositórios por deploy
 
 ## Completed This Session (Jan 31, 2026)
-- ✅ Corrigido bug "Reforçar Segurança" que reinstalava Fail2ban mesmo ativo
-  - Backend agora verifica estado antes de aplicar
-  - Frontend mostra items pulados (já configurados)
+- ✅ Bug fix: "Reforçar Segurança" não reinstala Fail2ban/UFW se já ativos
+- ✅ Aviso ao sair da página durante deploy ativo
+- ✅ Botão "Cancelar Deploy" quando status é building/deploying
+- ✅ Sistema completo de Backup MongoDB:
+  - Criar backup manual
+  - Configurações de backup automático (intervalo + max backups)
+  - Listar, restaurar, baixar e excluir backups
+  - Backups salvos no VPS em /var/backups/deployvps/{projeto}/
 
 ## Credentials (Test)
 - **App**: admin@admin.com / Admin@123
@@ -80,3 +97,4 @@ Sistema para automatizar o deploy de aplicações web de repositórios GitHub pa
 ## Known Issues
 - VPS tem recursos limitados (2GB RAM) - builds Docker podem travar
 - Projeto `saasv6` precisa patch especial para admin panel via IP
+- Backup automático salva configuração mas não executa cronjob ainda
