@@ -1022,10 +1022,48 @@ export default function DeploymentDetails() {
                           )}
                         </div>
                         
+                        {/* Import Backup Section */}
+                        <div className="bg-zinc-800/50 rounded-lg p-4 space-y-3">
+                          <h4 className="font-medium text-zinc-300 flex items-center gap-2">
+                            <Upload className="w-4 h-4" />
+                            Importar Backup
+                          </h4>
+                          <p className="text-xs text-zinc-500">
+                            Importe um backup (.gz) de outro projeto ou VPS para restaurar os dados aqui.
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="file"
+                              accept=".gz"
+                              onChange={handleImportBackup}
+                              disabled={backupLoading || deployment.status !== "running"}
+                              className="hidden"
+                              id="backup-import-input"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => document.getElementById('backup-import-input').click()}
+                              disabled={backupLoading || deployment.status !== "running"}
+                              className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                            >
+                              {backupLoading ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                              ) : (
+                                <Upload className="w-4 h-4 mr-2" />
+                              )}
+                              Selecionar Arquivo .gz
+                            </Button>
+                          </div>
+                        </div>
+                        
                         <div className="bg-blue-500/10 rounded-lg p-3 text-sm">
                           <p className="text-blue-400 font-medium">💡 Dica</p>
                           <p className="text-zinc-400 text-xs mt-1">
                             Os backups são salvos no VPS em: <code className="bg-zinc-800 px-1 rounded">/var/backups/deployvps/{deployment.project_name}/</code>
+                          </p>
+                          <p className="text-zinc-400 text-xs mt-1">
+                            Você pode baixar um backup e importá-lo em outro projeto ou VPS para migrar os dados.
                           </p>
                         </div>
                       </div>
