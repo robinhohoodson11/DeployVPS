@@ -2520,14 +2520,12 @@ async def download_backup(deployment_id: str, backup_id: str, user: dict = Depen
         
         # Get file content via SFTP
         sftp = ssh.open_sftp()
-        import io
         file_buffer = io.BytesIO()
         sftp.getfo(full_path, file_buffer)
         file_buffer.seek(0)
         sftp.close()
         ssh.close()
         
-        from fastapi.responses import StreamingResponse
         return StreamingResponse(
             file_buffer,
             media_type="application/gzip",
