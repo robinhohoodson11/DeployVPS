@@ -349,6 +349,77 @@ export default function DeploymentDetails() {
     }
   };
 
+  // Backup functions
+  const handleCreateBackup = async () => {
+    setBackupLoading(true);
+    try {
+      const response = await api.post(`/deployments/${id}/backups`);
+      toast.success("Backup criado!", {
+        description: response.data.backup.filename
+      });
+      fetchBackups();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao criar backup");
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleRestoreBackup = async (backupId) => {
+    if (!window.confirm("Restaurar este backup? Os dados atuais serão substituídos.")) return;
+    
+    setBackupLoading(true);
+    try {
+      await api.post(`/deployments/${id}/backups/${backupId}/restore`);
+      toast.success("Backup restaurado com sucesso!");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao restaurar backup");
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleDeleteBackup = async (backupId) => {
+    if (!window.confirm("Excluir este backup?")) return;
+    
+    try {
+      await api.delete(`/deployments/${id}/backups/${backupId}`);
+      toast.success("Backup removido");
+      fetchBackups();
+    } catch (error) {
+      toast.error("Erro ao remover backup");
+    }
+  };
+
+  const handleDownloadBackup = async (backupId) => {
+    try {
+      const response = await api.get(`/deployments/${id}/backups/${backupId}/download`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `backup_${backupId}.gz`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Download iniciado!");
+    } catch (error) {
+      toast.error("Erro ao baixar backup");
+    }
+  };
+
+  const handleUpdateBackupSettings = async (newSettings) => {
+    try {
+      await api.put(`/deployments/${id}/backups/settings`, newSettings);
+      setBackupSettings(newSettings);
+      toast.success("Configurações salvas!");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao salvar configurações");
+    }
+  };
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success("Copiado!");
