@@ -1,64 +1,82 @@
 # DeployVPS - Product Requirements Document
 
-## Problem Statement
-Sistema de deploy automático que permite aos usuários hospedar projetos do GitHub em suas VPS pessoais, fornecendo apenas o link do repositório e credenciais de acesso SSH da VPS.
+## Original Problem Statement
+Sistema para automatizar o deploy de aplicações web de repositórios GitHub para VPS do usuário. O sistema deve suportar tanto Nginx quanto Apache2, preservar dados MongoDB durante redeploys, e oferecer configuração de domínio customizado com SSL.
 
 ## User Personas
-1. **Desenvolvedor Individual** - Quer deploy fácil sem configurar CI/CD complexo
-2. **Pequenas Equipes** - Precisam gerenciar múltiplos projetos em VPS existentes
-3. **Freelancers** - Querem deploy rápido para projetos de clientes
+- **Desenvolvedor Individual**: Quer fazer deploy rápido de projetos Emergent/GitHub para seu VPS
+- **Admin de Sistema**: Gerencia múltiplos VPS e deploys com necessidade de monitoramento de segurança
 
-## Core Requirements
-- Autenticação JWT (registro/login)
-- Gerenciamento de VPS (CRUD)
-- Suporte a autenticação SSH por senha ou chave
-- Deploy via Docker (isolamento)
-- Suporte a repositórios públicos e privados (GitHub token)
-- Configuração de domínio com Nginx reverse proxy
-- Logs de deploy em tempo real
-- Monitoramento de status
+## Core Requirements (Implemented)
+1. ✅ Autenticação de usuários (JWT)
+2. ✅ Gerenciamento de VPS (CRUD)
+3. ✅ Deploy de projetos GitHub (frontend, backend, full-stack)
+4. ✅ Redeploy preservando dados MongoDB
+5. ✅ Suporte a Apache2 e Nginx
+6. ✅ Configuração de domínio customizado
+7. ✅ SSL via Let's Encrypt
+8. ✅ Visualizador de logs estilo Emergent
+9. ✅ Verificação e hardening de segurança VPS
+10. ✅ Landing page otimizada para SEO
+
+## Tech Stack
+- **Frontend**: React + TailwindCSS + Shadcn/UI
+- **Backend**: FastAPI + Python
+- **Database**: MongoDB
+- **Remote Execution**: Paramiko (SSH)
+- **Containerization**: Docker
 
 ## Architecture
-- **Backend**: FastAPI + MongoDB + Paramiko (SSH)
-- **Frontend**: React + Tailwind + Shadcn/UI
-- **Deploy**: Docker containers na VPS do usuário
-- **Proxy**: Nginx para domínios personalizados
+```
+/app
+├── backend/
+│   ├── .env          # MONGO_URL, JWT_SECRET
+│   └── server.py     # API monolítica (2500+ linhas - precisa refatorar)
+├── frontend/
+│   ├── public/       # index.html, robots.txt, sitemap.xml
+│   └── src/
+│       ├── pages/    # LandingPage, Dashboard, VPSManagement, DeploymentDetails
+│       └── components/
+```
 
-## What's Been Implemented (Jan 2026)
-- [x] Autenticação JWT completa (registro/login)
-- [x] CRUD de VPS com criptografia de credenciais
-- [x] Teste de conexão SSH
-- [x] Criação de deployments com Docker
-- [x] Geração automática de Dockerfile (Node.js, Python, Static)
-- [x] Logs de deploy em tempo real
-- [x] Configuração de domínio com Nginx
-- [x] UI completa com design terminal/dark mode
-- [x] Dashboard com estatísticas
-- [x] Gerenciamento de servidores VPS
-- [x] Detalhes de deployment com logs
+## Key API Endpoints
+- `POST /api/auth/login` - Login
+- `POST /api/deployments` - Criar deploy
+- `POST /api/deployments/{id}/redeploy` - Redeploy
+- `DELETE /api/deployments/{id}` - Deletar deploy
+- `GET /api/deployments/{id}/logs` - Logs
+- `POST /api/deployments/{id}/domain` - Configurar domínio
+- `POST /api/deployments/{id}/ssl` - Ativar SSL
+- `GET /api/vps/{id}/security` - Check segurança
+- `POST /api/vps/{id}/security/harden` - Hardening
 
 ## Prioritized Backlog
 
 ### P0 (Critical)
-- N/A - MVP completo
+- [ ] Fazer novo deploy do projeto `saasv6` (dados perdidos)
+- [ ] Testar responsividade da UI durante deploys longos
 
 ### P1 (High)
-- [ ] SSL/HTTPS automático com Certbot
-- [ ] Webhooks para auto-deploy em push
-- [ ] Notificações de status (email/webhook)
+- [ ] Finalizar SEO com domínio definitivo (substituir `deployvps.com`)
+- [ ] Criar imagem Open Graph (1200x630px)
 
 ### P2 (Medium)
-- [ ] Multi-branch deployments
-- [ ] Rollback para versões anteriores
-- [ ] Métricas de uso (CPU, memória)
-- [ ] Suporte a GitLab/Bitbucket
+- [ ] Refatorar server.py em módulos (routers/, services/)
+- [ ] Adicionar histórico de ações de segurança
 
 ### P3 (Low)
-- [ ] Interface CLI
-- [ ] API pública documentada
-- [ ] Integração com Cloudflare DNS
+- [ ] Desabilitar login root SSH automaticamente (com confirmação)
+- [ ] Suporte a múltiplos repositórios por deploy
 
-## Next Tasks
-1. Testar com VPS real
-2. Implementar webhooks GitHub
-3. Adicionar SSL automático
+## Completed This Session (Jan 31, 2026)
+- ✅ Corrigido bug "Reforçar Segurança" que reinstalava Fail2ban mesmo ativo
+  - Backend agora verifica estado antes de aplicar
+  - Frontend mostra items pulados (já configurados)
+
+## Credentials (Test)
+- **App**: admin@admin.com / Admin@123
+- **VPS**: 174.138.178.243 / root / Ba4_Paf6=Mi5
+
+## Known Issues
+- VPS tem recursos limitados (2GB RAM) - builds Docker podem travar
+- Projeto `saasv6` precisa patch especial para admin panel via IP
