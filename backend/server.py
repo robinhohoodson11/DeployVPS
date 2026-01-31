@@ -1818,6 +1818,50 @@ async def stop_deployment(deployment_id: str, user: dict = Depends(get_current_u
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.post("/deployments/{deployment_id}/cancel")
+async def cancel_deployment(deployment_id: str, user: dict = Depends(get_current_user)):
+    """Cancel an in-progress deployment"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    # Only allow canceling if deployment is in progress
+    if deployment["status"] not in ["pending", "cloning", "building", "deploying"]:
+        raise HTTPException(status_code=400, detail="Deploy não está em andamento")
+    
+    vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    try:
+        ssh = get_ssh_client(vps)
+        project_name = deployment['project_name']
+        
+        # Kill any running docker build processes for this project
+        ssh.exec_command(f"pkill -f 'docker build.*{project_name}' 2>/dev/null")
+        
+        # Stop any partially running containers
+        containers = [
+            f"deploy_{project_name}",
+            f"frontend_{project_name}",
+            f"backend_{project_name}",
+        ]
+        for container in containers:
+            ssh.exec_command(f"docker stop {container} 2>/dev/null")
+            ssh.exec_command(f"docker rm -f {container} 2>/dev/null")
+        
+        # Clean up any temporary build files
+        ssh.exec_command(f"rm -rf /tmp/{project_name}_build 2>/dev/null")
+        
+        ssh.close()
+        
+        await update_deployment_status(deployment_id, DeployStatus.FAILED)
+        await add_deployment_log(deployment_id, "Deploy cancelado pelo usuário", "warning")
+        
+        return {"message": "Deploy cancelado"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.delete("/deployments/{deployment_id}")
 async def delete_deployment(deployment_id: str, user: dict = Depends(get_current_user)):
     deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
