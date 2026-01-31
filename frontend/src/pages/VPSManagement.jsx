@@ -132,13 +132,25 @@ export default function VPSManagement() {
   };
 
   const handleHardenSecurity = async (id) => {
-    if (!window.confirm("Isso irá instalar Fail2ban e configurar o Firewall. Deseja continuar?")) return;
+    if (!window.confirm("Isso irá verificar e aplicar configurações de segurança. Deseja continuar?")) return;
     
     setHardeningVps(id);
     try {
       const response = await api.post(`/vps/${id}/security/harden`);
-      toast.success("Segurança reforçada!", {
-        description: response.data.actions.join(", ")
+      const { actions, skipped, message } = response.data;
+      
+      // Build detailed description
+      let description = "";
+      if (actions && actions.length > 0) {
+        description += "✅ " + actions.join(" | ");
+      }
+      if (skipped && skipped.length > 0) {
+        if (description) description += "\n";
+        description += "ℹ️ " + skipped.join(" | ");
+      }
+      
+      toast.success(message || "Segurança verificada!", {
+        description: description || "Nenhuma ação necessária"
       });
       // Refresh security report
       handleCheckSecurity(id);
