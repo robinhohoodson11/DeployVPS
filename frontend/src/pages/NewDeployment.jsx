@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, GitBranch, Server, Rocket, Loader2, Key, AlertCircle, Database } from "lucide-react";
+import { ArrowLeft, GitBranch, Server, Rocket, Loader2, Key, AlertCircle, Database, RefreshCw } from "lucide-react";
 import Header from "../components/Header";
 
 export default function NewDeployment() {
