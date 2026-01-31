@@ -2558,6 +2558,76 @@ async def update_backup_settings(deployment_id: str, settings: BackupSettings, u
     
     return {"message": "Configurações atualizadas", "settings": settings.dict()}
 
+@api_router.post("/deployments/{deployment_id}/backups/import")
+async def import_backup(
+    deployment_id: str, 
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user)
+):
+    """Import a backup file from local machine and restore it to MongoDB"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    if deployment.get("deploy_type") != "fullstack":
+        raise HTTPException(status_code=400, detail="Backups só estão disponíveis para deploys fullstack com MongoDB")
+    
+    # Validate file
+    if not file.filename.endswith('.gz'):
+        raise HTTPException(status_code=400, detail="Arquivo deve ser um backup .gz válido")
+    
+    vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    try:
+        ssh = get_ssh_client(vps)
+        project_name = deployment['project_name']
+        backup_path = f"{BACKUP_BASE_PATH}/{project_name}"
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        backup_file = f"imported_{timestamp}.gz"
+        full_path = f"{backup_path}/{backup_file}"
+        
+        # Create backup directory if not exists
+        ssh.exec_command(f"mkdir -p {backup_path}")
+        
+        # Read file content
+        file_content = await file.read()
+        
+        # Upload file via SFTP
+        sftp = ssh.open_sftp()
+        with sftp.file(full_path, 'wb') as remote_file:
+            remote_file.write(file_content)
+        sftp.close()
+        
+        # Restore the imported backup
+        mongo_container = f"mongodb_{project_name}"
+        restore_cmd = f"cat {full_path} | docker exec -i {mongo_container} mongorestore --archive --gzip --drop 2>&1"
+        
+        stdin, stdout, stderr = ssh.exec_command(restore_cmd)
+        output = stdout.read().decode()
+        exit_status = stdout.channel.recv_exit_status()
+        
+        ssh.close()
+        
+        if exit_status != 0:
+            raise HTTPException(status_code=500, detail=f"Erro ao restaurar backup importado: {output}")
+        
+        return {
+            "message": "Backup importado e restaurado com sucesso",
+            "backup": {
+                "id": f"imported_{timestamp}",
+                "filename": backup_file,
+                "size": f"{len(file_content) / (1024*1024):.2f} MB" if len(file_content) > 1024*1024 else f"{len(file_content) / 1024:.2f} KB",
+                "path": full_path,
+                "restored": True
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao importar backup: {str(e)}")
+
 # ============ LIVE LOGS ============
 
 @api_router.get("/deployments/{deployment_id}/logs")
