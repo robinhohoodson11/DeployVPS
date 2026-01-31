@@ -96,6 +96,12 @@ Sistema para automatizar o deploy de aplicações web de repositórios GitHub pa
   - Dica de ranges de portas sugeridas
 - ✅ Limpeza de recursos não utilizados no VPS (2.43GB liberados)
 
+- ✅ Seleção inteligente de portas:
+  - Campo único "Porta Base"
+  - Verificação automática de portas disponíveis no VPS
+  - Sugere Frontend, Backend e MongoDB sem conflitos
+- ✅ Confirmado: Criar usuário admin automático funcionando
+
 ## Credentials (Test)
 - **App**: admin@admin.com / Admin@123
 - **VPS**: 174.138.178.243 / root / Ba4_Paf6=Mi5
