@@ -237,21 +237,24 @@ export default function NewDeployment() {
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label className="text-zinc-300">Porta da Aplicação</Label>
-                  <Input
-                    type="number"
-                    placeholder="3000"
-                    value={form.port}
-                    onChange={(e) => setForm({ ...form, port: parseInt(e.target.value) })}
-                    required
-                    data-testid="port-input"
-                    className="bg-zinc-800/50 border-zinc-700 font-mono w-32"
-                  />
-                  <p className="text-xs text-zinc-500">
-                    Porta em que sua aplicação roda (ex: 3000 para Node, 8000 para Python)
-                  </p>
-                </div>
+                {/* Port - Only show for non-fullstack deploys */}
+                {!form.create_mongodb && (
+                  <div className="space-y-2">
+                    <Label className="text-zinc-300">Porta da Aplicação</Label>
+                    <Input
+                      type="number"
+                      placeholder="3000"
+                      value={form.port}
+                      onChange={(e) => setForm({ ...form, port: parseInt(e.target.value) })}
+                      required
+                      data-testid="port-input"
+                      className="bg-zinc-800/50 border-zinc-700 font-mono w-32"
+                    />
+                    <p className="text-xs text-zinc-500">
+                      Porta em que sua aplicação roda (ex: 3000 para Node, 8000 para Python)
+                    </p>
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <Label className="text-zinc-300 flex items-center gap-2">
