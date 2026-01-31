@@ -88,7 +88,13 @@ Sistema para automatizar o deploy de aplicações web de repositórios GitHub pa
   - Criar backup manual
   - Configurações de backup automático (intervalo + max backups)
   - Listar, restaurar, baixar e excluir backups
+  - **Importar backup** de arquivo externo
   - Backups salvos no VPS em /var/backups/deployvps/{projeto}/
+- ✅ Bug fix: Conflito de portas no deploy saasv6 (MongoDB na porta errada)
+- ✅ Melhoria no formulário de novo deploy:
+  - 3 campos de porta separados (Frontend, Backend, MongoDB)
+  - Dica de ranges de portas sugeridas
+- ✅ Limpeza de recursos não utilizados no VPS (2.43GB liberados)
 
 ## Credentials (Test)
 - **App**: admin@admin.com / Admin@123
