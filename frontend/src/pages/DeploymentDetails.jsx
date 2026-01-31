@@ -158,6 +158,20 @@ export default function DeploymentDetails() {
     return () => clearInterval(interval);
   }, [id]);
 
+  // Warn user before leaving page during active deployment
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (deployment && ["pending", "cloning", "building", "deploying"].includes(deployment.status)) {
+        e.preventDefault();
+        e.returnValue = "Deploy em andamento! Tem certeza que deseja sair?";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [deployment?.status]);
+
   useEffect(() => {
     if (showAllLogs) {
       logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
