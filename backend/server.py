@@ -754,6 +754,62 @@ async def get_admin_stats(admin: dict = Depends(require_admin)):
         "admin_users": admin_users
     }
 
+# ============ VPS PORT CHECKER ============
+
+@api_router.get("/vps/{vps_id}/available-ports")
+async def get_available_ports(vps_id: str, base_port: int = 3000, user: dict = Depends(get_current_user)):
+    """Check available ports on VPS and suggest port configuration for a new deployment"""
+    vps = await db.vps.find_one({"id": vps_id, "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    try:
+        ssh = get_ssh_client(vps)
+        
+        # Get all ports in use
+        stdin, stdout, stderr = ssh.exec_command("netstat -tlnp 2>/dev/null | grep LISTEN | awk '{print $4}' | grep -oE '[0-9]+$' | sort -n | uniq")
+        output = stdout.read().decode().strip()
+        used_ports = set(int(p) for p in output.split('\n') if p.isdigit())
+        
+        # Also get ports from running docker containers
+        stdin, stdout, stderr = ssh.exec_command("docker ps --format '{{.Ports}}' 2>/dev/null | grep -oE '0.0.0.0:[0-9]+' | grep -oE '[0-9]+$'")
+        docker_output = stdout.read().decode().strip()
+        docker_ports = set(int(p) for p in docker_output.split('\n') if p.isdigit())
+        used_ports.update(docker_ports)
+        
+        ssh.close()
+        
+        # Find available ports starting from base_port
+        def find_available_port(start, used, step=100):
+            port = start
+            while port in used or port < 1024 or port > 65535:
+                port += step
+                if port > 65535:
+                    port = start + 1
+                    step = 1
+            return port
+        
+        # Calculate suggested ports
+        frontend_port = find_available_port(base_port, used_ports)
+        used_ports.add(frontend_port)
+        
+        backend_port = find_available_port(base_port + 1000, used_ports)
+        used_ports.add(backend_port)
+        
+        mongodb_port = find_available_port(27017, used_ports)
+        
+        return {
+            "base_port": base_port,
+            "suggested": {
+                "frontend_port": frontend_port,
+                "backend_port": backend_port,
+                "mongodb_port": mongodb_port
+            },
+            "used_ports": sorted(list(used_ports - {frontend_port, backend_port, mongodb_port}))[:20]  # Show first 20 used ports
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao verificar portas: {str(e)}")
+
 # ============ VPS SECURITY ============
 
 @api_router.get("/vps/{vps_id}/security")
