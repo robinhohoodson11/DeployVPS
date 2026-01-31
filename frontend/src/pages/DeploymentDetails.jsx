@@ -128,6 +128,26 @@ export default function DeploymentDetails() {
   const [domain, setDomain] = useState("");
   const [showAllLogs, setShowAllLogs] = useState(false);
   const logsEndRef = useRef(null);
+  
+  // Backup states
+  const [backups, setBackups] = useState([]);
+  const [backupSettings, setBackupSettings] = useState({
+    auto_backup_enabled: false,
+    auto_backup_interval_hours: 24,
+    max_backups: 5
+  });
+  const [backupDialogOpen, setBackupDialogOpen] = useState(false);
+  const [backupLoading, setBackupLoading] = useState(false);
+
+  const fetchBackups = async () => {
+    try {
+      const res = await api.get(`/deployments/${id}/backups`);
+      setBackups(res.data.backups || []);
+      setBackupSettings(res.data.settings || backupSettings);
+    } catch (error) {
+      // Silently fail for non-fullstack deployments
+    }
+  };
 
   const fetchData = async (isInitial = false) => {
     try {
@@ -141,6 +161,11 @@ export default function DeploymentDetails() {
       if (deployRes.data.vps_id && !vps) {
         const vpsRes = await api.get(`/vps/${deployRes.data.vps_id}`);
         setVps(vpsRes.data);
+      }
+      
+      // Fetch backups for fullstack deployments
+      if (deployRes.data.deploy_type === "fullstack") {
+        fetchBackups();
       }
     } catch (error) {
       if (isInitial) {
