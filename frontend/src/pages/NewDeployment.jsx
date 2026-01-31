@@ -61,6 +61,35 @@ export default function NewDeployment() {
     fetchVPS();
   }, []);
 
+  // Fetch available ports when VPS is selected and MongoDB is enabled
+  const fetchAvailablePorts = async (vpsId, basePort) => {
+    if (!vpsId) return;
+    
+    setLoadingPorts(true);
+    try {
+      const response = await api.get(`/vps/${vpsId}/available-ports?base_port=${basePort}`);
+      const suggested = response.data.suggested;
+      setSuggestedPorts(suggested);
+      setForm(f => ({
+        ...f,
+        port: suggested.frontend_port,
+        backend_port: suggested.backend_port,
+        mongodb_port: suggested.mongodb_port
+      }));
+    } catch (error) {
+      console.error("Erro ao verificar portas:", error);
+      // Use defaults if check fails
+      setForm(f => ({
+        ...f,
+        port: basePort,
+        backend_port: basePort + 1000,
+        mongodb_port: 27017
+      }));
+    } finally {
+      setLoadingPorts(false);
+    }
+  };
+
   const parseEnvVars = (text) => {
     if (!text.trim()) return null;
     const vars = {};
