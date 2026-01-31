@@ -19,8 +19,10 @@ import { toast } from "sonner";
 import { 
   ArrowLeft, GitBranch, RefreshCw, Square, Play, Trash2, 
   Globe, Terminal, Clock, Server, ExternalLink, Loader2, Copy, Lock, ShieldCheck,
-  ChevronDown, ChevronRight, CheckCircle, XCircle, Circle
+  ChevronDown, ChevronRight, CheckCircle, XCircle, Circle,
+  Database, Download, RotateCcw, Settings, HardDrive, Calendar
 } from "lucide-react";
+import { Switch } from "../components/ui/switch";
 import Header from "../components/Header";
 
 const statusConfig = {
