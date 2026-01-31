@@ -91,6 +91,7 @@ export default function NewDeployment() {
         branch: form.branch,
         project_name: form.project_name.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
         port: form.port,
+        backend_port: form.create_mongodb ? form.backend_port : null,
         github_token: form.github_token || null,
         env_vars: parseEnvVars(form.env_vars),
         create_mongodb: form.create_mongodb,
