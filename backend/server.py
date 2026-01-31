@@ -1052,12 +1052,15 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict, is_red
         try:
             disk_percent = int(disk_usage)
             if disk_percent > 90:
-                await add_deployment_log(deployment_id, f"⚠️ Disk usage at {disk_percent}%! Cleaning up...", "warning")
-                # Auto cleanup
-                ssh.exec_command("docker image prune -af > /dev/null 2>&1")
-                ssh.exec_command("docker container prune -f > /dev/null 2>&1")
-                ssh.exec_command("docker builder prune -af > /dev/null 2>&1")
-                ssh.exec_command("journalctl --vacuum-time=2d > /dev/null 2>&1")
+                await add_deployment_log(deployment_id, f"⚠️ Disk usage at {disk_percent}%! Cleaning up (preserving MongoDB volumes)...", "warning")
+                # Auto cleanup - NEVER remove volumes to preserve MongoDB data
+                # Only remove unused images and build cache
+                ssh.exec_command("docker image prune -f > /dev/null 2>&1")  # Remove dangling images only
+                ssh.exec_command("docker builder prune -f > /dev/null 2>&1")  # Remove build cache
+                ssh.exec_command("journalctl --vacuum-time=2d > /dev/null 2>&1")  # Clean old logs
+                # DO NOT run: docker container prune (might remove stopped containers during redeploy)
+                # DO NOT run: docker volume prune (would delete MongoDB data)
+                # DO NOT run: docker system prune (too aggressive)
                 await asyncio.sleep(3)
                 
                 # Recheck
