@@ -815,6 +815,190 @@ export default function DeploymentDetails() {
                 )}
               </CardContent>
             </Card>
+            
+            {/* Backup Card - Only for fullstack deployments */}
+            {deployment.deploy_type === "fullstack" && (
+              <Card className="bg-zinc-900/50 border-zinc-800">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-zinc-400 flex items-center gap-2">
+                    <Database className="w-4 h-4" />
+                    Backup MongoDB
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCreateBackup}
+                    disabled={backupLoading || deployment.status !== "running"}
+                    data-testid="create-backup-btn"
+                    className="w-full border-blue-500/50 text-blue-500 hover:bg-blue-500/10"
+                  >
+                    {backupLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <HardDrive className="w-4 h-4 mr-2" />
+                    )}
+                    Criar Backup Agora
+                  </Button>
+                  
+                  <Dialog open={backupDialogOpen} onOpenChange={setBackupDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-zinc-700"
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Gerenciar Backups ({backups.length})
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Database className="w-5 h-5" />
+                          Gerenciar Backups
+                        </DialogTitle>
+                        <DialogDescription className="text-zinc-500">
+                          Gerencie os backups do banco de dados MongoDB
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <div className="space-y-6 mt-4">
+                        {/* Backup Settings */}
+                        <div className="bg-zinc-800/50 rounded-lg p-4 space-y-4">
+                          <h4 className="font-medium text-zinc-300 flex items-center gap-2">
+                            <Settings className="w-4 h-4" />
+                            Configurações de Backup Automático
+                          </h4>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-zinc-300">Backup Automático</p>
+                              <p className="text-xs text-zinc-500">Criar backups automaticamente</p>
+                            </div>
+                            <Switch
+                              checked={backupSettings.auto_backup_enabled}
+                              onCheckedChange={(checked) => {
+                                const newSettings = { ...backupSettings, auto_backup_enabled: checked };
+                                handleUpdateBackupSettings(newSettings);
+                              }}
+                            />
+                          </div>
+                          
+                          {backupSettings.auto_backup_enabled && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-zinc-400 text-sm">Intervalo (horas)</Label>
+                                <select
+                                  value={backupSettings.auto_backup_interval_hours}
+                                  onChange={(e) => {
+                                    const newSettings = { ...backupSettings, auto_backup_interval_hours: parseInt(e.target.value) };
+                                    handleUpdateBackupSettings(newSettings);
+                                  }}
+                                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm"
+                                >
+                                  <option value={1}>1 hora</option>
+                                  <option value={6}>6 horas</option>
+                                  <option value={12}>12 horas</option>
+                                  <option value={24}>24 horas (Diário)</option>
+                                  <option value={168}>168 horas (Semanal)</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-zinc-400 text-sm">Máx. Backups</Label>
+                                <select
+                                  value={backupSettings.max_backups}
+                                  onChange={(e) => {
+                                    const newSettings = { ...backupSettings, max_backups: parseInt(e.target.value) };
+                                    handleUpdateBackupSettings(newSettings);
+                                  }}
+                                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm"
+                                >
+                                  <option value={3}>3 backups</option>
+                                  <option value={5}>5 backups</option>
+                                  <option value={10}>10 backups</option>
+                                  <option value={20}>20 backups</option>
+                                </select>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Backup List */}
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-zinc-300 flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            Backups Disponíveis
+                          </h4>
+                          
+                          {backups.length === 0 ? (
+                            <div className="text-center py-8 text-zinc-500">
+                              <Database className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                              <p>Nenhum backup disponível</p>
+                              <p className="text-xs mt-1">Clique em "Criar Backup Agora" para começar</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {backups.map((backup) => (
+                                <div
+                                  key={backup.id}
+                                  className="flex items-center justify-between bg-zinc-800/50 rounded-lg p-3"
+                                >
+                                  <div>
+                                    <p className="font-mono text-sm text-zinc-300">{backup.filename}</p>
+                                    <p className="text-xs text-zinc-500">
+                                      {backup.created_at} • {backup.size}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDownloadBackup(backup.id)}
+                                      className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-500"
+                                      title="Baixar"
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleRestoreBackup(backup.id)}
+                                      disabled={backupLoading}
+                                      className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-500"
+                                      title="Restaurar"
+                                    >
+                                      <RotateCcw className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteBackup(backup.id)}
+                                      className="h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-500"
+                                      title="Excluir"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="bg-blue-500/10 rounded-lg p-3 text-sm">
+                          <p className="text-blue-400 font-medium">💡 Dica</p>
+                          <p className="text-zinc-400 text-xs mt-1">
+                            Os backups são salvos no VPS em: <code className="bg-zinc-800 px-1 rounded">/var/backups/deployvps/{deployment.project_name}/</code>
+                          </p>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Logs - New Emergent-style */}
