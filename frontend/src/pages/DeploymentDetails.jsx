@@ -327,6 +327,16 @@ export default function DeploymentDetails() {
     toast.success("Copiado!");
   };
 
+  const handleNavigateBack = () => {
+    if (isDeploying) {
+      if (window.confirm("Deploy em andamento! O processo continuará em segundo plano. Deseja sair mesmo assim?")) {
+        navigate("/dashboard");
+      }
+    } else {
+      navigate("/dashboard");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
@@ -348,7 +358,7 @@ export default function DeploymentDetails() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Button
           variant="ghost"
-          onClick={() => navigate("/dashboard")}
+          onClick={handleNavigateBack}
           className="mb-6 text-zinc-400 hover:text-white"
           data-testid="back-btn"
         >
@@ -375,6 +385,25 @@ export default function DeploymentDetails() {
                 <Badge variant="outline" className={`${status.textColor} border-current text-sm py-1 px-3`}>
                   {status.label}
                 </Badge>
+                
+                {/* Cancel button during deployment */}
+                {isDeploying && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelDeploy}
+                    disabled={actionLoading === "cancel"}
+                    data-testid="cancel-deploy-btn"
+                    className="border-red-500/50 text-red-500 hover:bg-red-500/10"
+                  >
+                    {actionLoading === "cancel" ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <XCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Cancelar
+                  </Button>
+                )}
                 
                 {deployment.status === "running" && (
                   <Button
