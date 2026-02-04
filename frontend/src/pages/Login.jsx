@@ -1,18 +1,21 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../App";
+import { useLanguage } from "../i18n/LanguageContext";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { toast } from "sonner";
 import { Server, GitBranch, Terminal } from "lucide-react";
+import LanguageSelector from "../components/LanguageSelector";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -20,10 +23,10 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      toast.success("Login realizado com sucesso!");
+      toast.success(t('common.success'));
       navigate("/dashboard");
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao fazer login");
+      toast.error(error.response?.data?.detail || t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -31,6 +34,11 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-[#09090b] grid-pattern flex">
+      {/* Language Selector */}
+      <div className="absolute top-4 right-4 z-50">
+        <LanguageSelector />
+      </div>
+      
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-transparent to-transparent" />
@@ -42,12 +50,12 @@ export default function Login() {
             <h1 className="text-3xl font-bold tracking-tight">DeployVPS</h1>
           </div>
           <p className="text-xl text-zinc-400 mb-8">
-            Deploy seus projetos do GitHub diretamente na sua VPS com um clique.
+            {t('landing.hero.subtitle')}
           </p>
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-zinc-300">
               <GitBranch className="w-5 h-5 text-green-500" />
-              <span>Clone direto do repositório</span>
+              <span>{t('landing.features.items.autoDeploy.description')}</span>
             </div>
             <div className="flex items-center gap-3 text-zinc-300">
               <Server className="w-5 h-5 text-green-500" />

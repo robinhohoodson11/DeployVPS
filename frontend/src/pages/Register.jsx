@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, api } from "../App";
+import { useLanguage } from "../i18n/LanguageContext";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { toast } from "sonner";
 import { Terminal, Clock, CheckCircle } from "lucide-react";
+import LanguageSelector from "../components/LanguageSelector";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -16,6 +18,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [pendingMessage, setPendingMessage] = useState(null);
   const { register } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
