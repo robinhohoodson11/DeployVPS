@@ -170,9 +170,9 @@ export default function Dashboard() {
               <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
                 <Terminal className="w-8 h-8 text-zinc-500" />
               </div>
-              <h3 className="text-lg font-medium mb-2">Nenhum deployment ainda</h3>
+              <h3 className="text-lg font-medium mb-2">{t('dashboard.noDeployments')}</h3>
               <p className="text-zinc-500 text-center mb-6 max-w-md">
-                Comece criando seu primeiro deployment. Você precisará primeiro adicionar um servidor VPS.
+                {t('dashboard.createFirst')}
               </p>
               <div className="flex gap-3">
                 <Button
@@ -181,14 +181,14 @@ export default function Dashboard() {
                   className="border-zinc-800 hover:bg-zinc-800"
                 >
                   <Server className="w-4 h-4 mr-2" />
-                  Adicionar VPS
+                  {t('vps.addNew')}
                 </Button>
                 <Button
                   onClick={() => navigate("/deploy/new")}
                   className="bg-green-500 hover:bg-green-600 text-black font-semibold"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Novo Deploy
+                  {t('dashboard.newDeploy')}
                 </Button>
               </div>
             </CardContent>
