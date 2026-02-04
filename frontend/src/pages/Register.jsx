@@ -139,7 +139,7 @@ export default function Register() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-zinc-300">Senha</Label>
+              <Label htmlFor="password" className="text-zinc-300">{t('auth.register.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -152,7 +152,7 @@ export default function Register() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-zinc-300">Confirmar Senha</Label>
+              <Label htmlFor="confirmPassword" className="text-zinc-300">{t('auth.register.confirmPassword')}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -173,14 +173,14 @@ export default function Register() {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                  Criando...
+                  {t('common.loading')}
                 </span>
-              ) : "Criar conta"}
+              ) : t('auth.register.submit')}
             </Button>
           </form>
           <div className="mt-4 p-3 bg-zinc-800/30 rounded-lg">
             <p className="text-xs text-zinc-500 text-center">
-              ⚠️ Após o cadastro, sua conta precisará ser aprovada pelo administrador.
+              ⚠️ {t('common.warning')}
             </p>
           </div>
           <p className="mt-4 text-center text-sm text-zinc-500">
