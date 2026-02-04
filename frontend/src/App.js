@@ -120,15 +120,16 @@ function PublicRoute({ children }) {
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Toaster 
-          theme="dark" 
-          position="top-right"
-          toastOptions={{
-            style: { background: '#18181b', border: '1px solid #27272a', color: '#fafafa' }
-          }}
-        />
+    <LanguageProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Toaster 
+            theme="dark" 
+            position="top-right"
+            toastOptions={{
+              style: { background: '#18181b', border: '1px solid #27272a', color: '#fafafa' }
+            }}
+          />
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
