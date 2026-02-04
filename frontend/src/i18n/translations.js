@@ -7,6 +7,7 @@ export const translations = {
       newDeploy: "Novo Deploy",
       users: "Usuários",
       logout: "Sair",
+      analytics: "Analytics",
     },
     // Landing Page
     landing: {
