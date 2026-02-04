@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, useAuth } from "../App";
+import { useLanguage } from "../i18n/LanguageContext";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -37,6 +38,7 @@ import {
 import Header from "../components/Header";
 
 export default function AdminUsers() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
@@ -248,10 +250,10 @@ export default function AdminUsers() {
 
   const getStatusBadge = (status) => {
     const configs = {
-      pending: { color: "text-yellow-500 border-yellow-500/50", icon: Clock, label: "Pendente" },
-      active: { color: "text-green-500 border-green-500/50", icon: CheckCircle, label: "Ativo" },
-      expired: { color: "text-orange-500 border-orange-500/50", icon: AlertCircle, label: "Expirado" },
-      blocked: { color: "text-red-500 border-red-500/50", icon: Ban, label: "Bloqueado" },
+      pending: { color: "text-yellow-500 border-yellow-500/50", icon: Clock, label: t('admin.pending') },
+      active: { color: "text-green-500 border-green-500/50", icon: CheckCircle, label: t('admin.active') },
+      expired: { color: "text-orange-500 border-orange-500/50", icon: AlertCircle, label: t('admin.expired') },
+      blocked: { color: "text-red-500 border-red-500/50", icon: Ban, label: t('admin.blocked') },
     };
     const config = configs[status] || configs.active;
     const Icon = config.icon;
@@ -283,9 +285,9 @@ export default function AdminUsers() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
               <Shield className="w-6 h-6 text-green-500" />
-              Painel Administrativo
+              {t('admin.title')}
             </h1>
-            <p className="text-zinc-500 mt-1">Gerencie usuários e configurações do sistema</p>
+            <p className="text-zinc-500 mt-1">{t('admin.users')}</p>
           </div>
           
           <div className="flex gap-2">
@@ -302,17 +304,17 @@ export default function AdminUsers() {
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Mail className="w-5 h-5" />
-                    Configurar Email (SMTP)
+                    {t('admin.smtpConfig')}
                   </DialogTitle>
                   <DialogDescription className="text-zinc-500">
-                    Configure o servidor SMTP para enviar emails de acesso
+                    SMTP
                   </DialogDescription>
                 </DialogHeader>
                 
                 <form onSubmit={handleSaveEmailConfig} className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-zinc-300">Servidor SMTP</Label>
+                      <Label className="text-zinc-300">{t('admin.smtpServer')}</Label>
                       <Input
                         placeholder="smtp.gmail.com"
                         value={emailConfig.smtp_host}
@@ -322,7 +324,7 @@ export default function AdminUsers() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-zinc-300">Porta</Label>
+                      <Label className="text-zinc-300">{t('admin.smtpPort')}</Label>
                       <Input
                         type="number"
                         placeholder="587"
@@ -335,7 +337,7 @@ export default function AdminUsers() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Usuário SMTP</Label>
+                    <Label className="text-zinc-300">{t('admin.smtpUser')}</Label>
                     <Input
                       placeholder="seu-email@gmail.com"
                       value={emailConfig.smtp_user}
@@ -346,7 +348,7 @@ export default function AdminUsers() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Senha / App Password</Label>
+                    <Label className="text-zinc-300">{t('admin.smtpPassword')}</Label>
                     <Input
                       type="password"
                       placeholder="••••••••"
@@ -355,11 +357,11 @@ export default function AdminUsers() {
                       required={!emailConfig.configured}
                       className="bg-zinc-800/50 border-zinc-700"
                     />
-                    <p className="text-xs text-zinc-500">Para Gmail, use uma App Password</p>
+                    <p className="text-xs text-zinc-500">{t('admin.gmailNote')}</p>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Nome do Remetente</Label>
+                    <Label className="text-zinc-300">{t('admin.senderName')}</Label>
                     <Input
                       placeholder="DeployVPS"
                       value={emailConfig.smtp_from_name}
@@ -369,7 +371,7 @@ export default function AdminUsers() {
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <Label className="text-zinc-300">Usar TLS</Label>
+                    <Label className="text-zinc-300">{t('admin.useTls')}</Label>
                     <Switch
                       checked={emailConfig.smtp_use_tls}
                       onCheckedChange={(checked) => setEmailConfig({ ...emailConfig, smtp_use_tls: checked })}
@@ -380,15 +382,15 @@ export default function AdminUsers() {
                     {emailConfig.configured && (
                       <Button type="button" variant="outline" onClick={handleTestEmail} className="border-zinc-700">
                         <Send className="w-4 h-4 mr-2" />
-                        Testar
+                        {t('admin.test')}
                       </Button>
                     )}
                     <div className="flex gap-3 ml-auto">
                       <Button type="button" variant="outline" onClick={() => setEmailDialogOpen(false)} className="border-zinc-700">
-                        Cancelar
+                        {t('admin.cancel')}
                       </Button>
                       <Button type="submit" disabled={submitting} className="bg-green-500 hover:bg-green-600 text-black font-semibold">
-                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
+                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('admin.save')}
                       </Button>
                     </div>
                   </div>
@@ -401,22 +403,22 @@ export default function AdminUsers() {
               <DialogTrigger asChild>
                 <Button className="bg-green-500 hover:bg-green-600 text-black font-semibold btn-glow">
                   <Plus className="w-4 h-4 mr-2" />
-                  Novo Usuário
+                  {t('admin.newUser')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-zinc-900 border-zinc-800">
                 <DialogHeader>
-                  <DialogTitle>Criar Novo Usuário</DialogTitle>
+                  <DialogTitle>{t('admin.newUser')}</DialogTitle>
                   <DialogDescription className="text-zinc-500">
-                    Crie um novo acesso ao sistema (já aprovado)
+                    {t('admin.createNewUser')}
                   </DialogDescription>
                 </DialogHeader>
                 
                 <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Nome</Label>
+                    <Label className="text-zinc-300">{t('admin.name')}</Label>
                     <Input
-                      placeholder="Nome do usuário"
+                      placeholder={t('admin.name')}
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       required
@@ -425,7 +427,7 @@ export default function AdminUsers() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Email</Label>
+                    <Label className="text-zinc-300">{t('admin.email')}</Label>
                     <Input
                       type="email"
                       placeholder="email@exemplo.com"
@@ -437,7 +439,7 @@ export default function AdminUsers() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Senha</Label>
+                    <Label className="text-zinc-300">{t('admin.password')}</Label>
                     <Input
                       type="password"
                       placeholder="••••••••"
@@ -450,7 +452,7 @@ export default function AdminUsers() {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-zinc-300">Tipo de Acesso</Label>
+                      <Label className="text-zinc-300">{t('admin.accessType')}</Label>
                       <Select value={form.role} onValueChange={(value) => setForm({ ...form, role: value })}>
                         <SelectTrigger className="bg-zinc-800/50 border-zinc-700">
                           <SelectValue />
@@ -459,7 +461,7 @@ export default function AdminUsers() {
                           <SelectItem value="user">
                             <div className="flex items-center gap-2">
                               <User className="w-4 h-4" />
-                              Usuário
+                              User
                             </div>
                           </SelectItem>
                           <SelectItem value="admin">
@@ -473,7 +475,7 @@ export default function AdminUsers() {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label className="text-zinc-300">Expira em</Label>
+                      <Label className="text-zinc-300">{t('admin.expiresAt')}</Label>
                       <Input
                         type="date"
                         value={form.expires_at}
@@ -488,7 +490,7 @@ export default function AdminUsers() {
                     <div className="flex items-center justify-between p-3 bg-zinc-800/30 rounded-lg">
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4 text-zinc-400" />
-                        <span className="text-sm text-zinc-300">Enviar credenciais por email</span>
+                        <span className="text-sm text-zinc-300">{t('admin.sendCredentials')}</span>
                       </div>
                       <Switch
                         checked={form.send_email}
@@ -499,10 +501,10 @@ export default function AdminUsers() {
                   
                   <div className="flex justify-end gap-3 pt-4">
                     <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="border-zinc-700">
-                      Cancelar
+                      {t('admin.cancel')}
                     </Button>
                     <Button type="submit" disabled={submitting} className="bg-green-500 hover:bg-green-600 text-black font-semibold">
-                      {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Criar Usuário"}
+                      {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('admin.newUser')}
                     </Button>
                   </div>
                 </form>
@@ -521,7 +523,7 @@ export default function AdminUsers() {
                     <Users className="w-5 h-5 text-zinc-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-zinc-500 uppercase">Total</p>
+                    <p className="text-xs text-zinc-500 uppercase">{t('admin.totalUsers')}</p>
                     <p className="text-2xl font-bold font-mono">{stats.total_users}</p>
                   </div>
                 </div>
@@ -535,7 +537,7 @@ export default function AdminUsers() {
                     <Clock className="w-5 h-5 text-yellow-500" />
                   </div>
                   <div>
-                    <p className="text-xs text-zinc-500 uppercase">Pendentes</p>
+                    <p className="text-xs text-zinc-500 uppercase">{t('admin.pending')}</p>
                     <p className="text-2xl font-bold font-mono text-yellow-500">{stats.pending_users}</p>
                   </div>
                 </div>
@@ -549,7 +551,7 @@ export default function AdminUsers() {
                     <CheckCircle className="w-5 h-5 text-green-500" />
                   </div>
                   <div>
-                    <p className="text-xs text-zinc-500 uppercase">Ativos</p>
+                    <p className="text-xs text-zinc-500 uppercase">{t('admin.activeUsers')}</p>
                     <p className="text-2xl font-bold font-mono text-green-500">{stats.active_users}</p>
                   </div>
                 </div>
@@ -563,7 +565,7 @@ export default function AdminUsers() {
                     <AlertCircle className="w-5 h-5 text-orange-500" />
                   </div>
                   <div>
-                    <p className="text-xs text-zinc-500 uppercase">Expirados</p>
+                    <p className="text-xs text-zinc-500 uppercase">{t('admin.expiredUsers')}</p>
                     <p className="text-2xl font-bold font-mono text-orange-500">{stats.expired_users}</p>
                   </div>
                 </div>
@@ -577,7 +579,7 @@ export default function AdminUsers() {
                     <Ban className="w-5 h-5 text-red-500" />
                   </div>
                   <div>
-                    <p className="text-xs text-zinc-500 uppercase">Bloqueados</p>
+                    <p className="text-xs text-zinc-500 uppercase">{t('admin.blockedUsers')}</p>
                     <p className="text-2xl font-bold font-mono text-red-500">{stats.blocked_users}</p>
                   </div>
                 </div>
@@ -591,7 +593,7 @@ export default function AdminUsers() {
                     <Crown className="w-5 h-5 text-yellow-500" />
                   </div>
                   <div>
-                    <p className="text-xs text-zinc-500 uppercase">Admins</p>
+                    <p className="text-xs text-zinc-500 uppercase">{t('admin.admins')}</p>
                     <p className="text-2xl font-bold font-mono text-yellow-500">{stats.admin_users}</p>
                   </div>
                 </div>
@@ -607,7 +609,7 @@ export default function AdminUsers() {
               <div className="flex items-center gap-3">
                 <Clock className="w-5 h-5 text-yellow-500" />
                 <span className="text-yellow-500 font-medium">
-                  {pendingUsers.length} usuário(s) aguardando aprovação
+                  {pendingUsers.length} {t('admin.usersAwaitingApproval')}
                 </span>
               </div>
             </CardContent>
@@ -617,13 +619,13 @@ export default function AdminUsers() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList className="bg-zinc-800/50 border border-zinc-700">
-            <TabsTrigger value="all" className="data-[state=active]:bg-zinc-700">Todos</TabsTrigger>
+            <TabsTrigger value="all" className="data-[state=active]:bg-zinc-700">{t('admin.all')}</TabsTrigger>
             <TabsTrigger value="pending" className="data-[state=active]:bg-zinc-700">
-              Pendentes {pendingUsers.length > 0 && `(${pendingUsers.length})`}
+              {t('admin.pending')} {pendingUsers.length > 0 && `(${pendingUsers.length})`}
             </TabsTrigger>
-            <TabsTrigger value="active" className="data-[state=active]:bg-zinc-700">Ativos</TabsTrigger>
-            <TabsTrigger value="expired" className="data-[state=active]:bg-zinc-700">Expirados</TabsTrigger>
-            <TabsTrigger value="blocked" className="data-[state=active]:bg-zinc-700">Bloqueados</TabsTrigger>
+            <TabsTrigger value="active" className="data-[state=active]:bg-zinc-700">{t('admin.active')}</TabsTrigger>
+            <TabsTrigger value="expired" className="data-[state=active]:bg-zinc-700">{t('admin.expired')}</TabsTrigger>
+            <TabsTrigger value="blocked" className="data-[state=active]:bg-zinc-700">{t('admin.blocked')}</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -634,7 +636,7 @@ export default function AdminUsers() {
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="text-center py-20 text-zinc-500">
-            Nenhum usuário encontrado
+            {t('admin.noUsers')}
           </div>
         ) : (
           <div className="grid gap-4">
@@ -685,7 +687,7 @@ export default function AdminUsers() {
                               className="bg-green-500/20 text-green-500 hover:bg-green-500/30"
                             >
                               <UserCheck className="w-4 h-4 mr-1" />
-                              Aprovar
+                              {t('admin.approve')}
                             </Button>
                             <Button
                               size="sm"
@@ -694,7 +696,7 @@ export default function AdminUsers() {
                               className="border-red-500/50 text-red-500 hover:bg-red-500/10"
                             >
                               <UserX className="w-4 h-4 mr-1" />
-                              Rejeitar
+                              {t('admin.reject')}
                             </Button>
                           </>
                         )}
@@ -745,7 +747,7 @@ export default function AdminUsers() {
                   </div>
                   
                   <div className="mt-3 pt-3 border-t border-zinc-800 text-xs text-zinc-500">
-                    Criado em: {new Date(u.created_at).toLocaleString("pt-BR")}
+                    {t('admin.createdAt')}: {new Date(u.created_at).toLocaleString("pt-BR")}
                   </div>
                 </CardContent>
               </Card>
@@ -757,7 +759,7 @@ export default function AdminUsers() {
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent className="bg-zinc-900 border-zinc-800">
             <DialogHeader>
-              <DialogTitle>Editar Usuário</DialogTitle>
+              <DialogTitle>{t('admin.editUser')}</DialogTitle>
               <DialogDescription className="text-zinc-500">
                 {selectedUser?.email}
               </DialogDescription>
@@ -765,7 +767,7 @@ export default function AdminUsers() {
             
             <form onSubmit={handleEdit} className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label className="text-zinc-300">Nome</Label>
+                <Label className="text-zinc-300">{t('admin.name')}</Label>
                 <Input
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
@@ -775,50 +777,50 @@ export default function AdminUsers() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-zinc-300">Tipo</Label>
+                  <Label className="text-zinc-300">{t('admin.type')}</Label>
                   <Select value={editForm.role} onValueChange={(value) => setEditForm({ ...editForm, role: value })}>
                     <SelectTrigger className="bg-zinc-800/50 border-zinc-700">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-zinc-800">
-                      <SelectItem value="user">Usuário</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-zinc-300">Status</Label>
+                  <Label className="text-zinc-300">{t('admin.status')}</Label>
                   <Select value={editForm.status} onValueChange={(value) => setEditForm({ ...editForm, status: value })}>
                     <SelectTrigger className="bg-zinc-800/50 border-zinc-700">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-zinc-800">
-                      <SelectItem value="active">Ativo</SelectItem>
-                      <SelectItem value="expired">Expirado</SelectItem>
-                      <SelectItem value="blocked">Bloqueado</SelectItem>
+                      <SelectItem value="active">{t('admin.active')}</SelectItem>
+                      <SelectItem value="expired">{t('admin.expired')}</SelectItem>
+                      <SelectItem value="blocked">{t('admin.blocked')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label className="text-zinc-300">Data de Expiração</Label>
+                <Label className="text-zinc-300">{t('admin.expiresAt')}</Label>
                 <Input
                   type="date"
                   value={editForm.expires_at}
                   onChange={(e) => setEditForm({ ...editForm, expires_at: e.target.value })}
                   className="bg-zinc-800/50 border-zinc-700"
                 />
-                <p className="text-xs text-zinc-500">Deixe vazio para acesso sem expiração</p>
+                <p className="text-xs text-zinc-500">{t('admin.noExpiration')}</p>
               </div>
               
               <div className="flex justify-end gap-3 pt-4">
                 <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)} className="border-zinc-700">
-                  Cancelar
+                  {t('admin.cancel')}
                 </Button>
                 <Button type="submit" disabled={submitting} className="bg-green-500 hover:bg-green-600 text-black font-semibold">
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('admin.save')}
                 </Button>
               </div>
             </form>
