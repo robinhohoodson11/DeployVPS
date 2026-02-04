@@ -79,15 +79,15 @@ export default function Login() {
               </div>
               <span className="text-xl font-bold">DeployVPS</span>
             </div>
-            <CardTitle className="text-2xl font-bold tracking-tight">Entrar</CardTitle>
+            <CardTitle className="text-2xl font-bold tracking-tight">{t('auth.login.title')}</CardTitle>
             <CardDescription className="text-zinc-500">
-              Entre com seu email e senha para acessar
+              {t('auth.login.subtitle')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-zinc-300">Email</Label>
+                <Label htmlFor="email" className="text-zinc-300">{t('auth.login.email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -100,7 +100,7 @@ export default function Login() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-zinc-300">Senha</Label>
+                <Label htmlFor="password" className="text-zinc-300">{t('auth.login.password')}</Label>
                 <Input
                   id="password"
                   type="password"
