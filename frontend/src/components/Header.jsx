@@ -145,7 +145,7 @@ export default function Header() {
                     data-testid="logout-btn"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
-                    Sair
+                    {t('header.logout')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
