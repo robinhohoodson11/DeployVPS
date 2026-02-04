@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../App";
+import { useLanguage } from "../i18n/LanguageContext";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -26,6 +27,7 @@ import { Plus, Server, Trash2, CheckCircle, XCircle, Loader2, Wifi, Shield, Shie
 import Header from "../components/Header";
 
 export default function VPSManagement() {
+  const { t } = useLanguage();
   const [vpsList, setVpsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -168,8 +170,8 @@ export default function VPSManagement() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Servidores VPS</h1>
-            <p className="text-zinc-500 mt-1">Gerencie seus servidores para deploy</p>
+            <h1 className="text-2xl font-bold tracking-tight">{t('vps.title')}</h1>
+            <p className="text-zinc-500 mt-1">{t('vps.subtitle')}</p>
           </div>
           
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -179,23 +181,23 @@ export default function VPSManagement() {
                 data-testid="add-vps-btn"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Adicionar VPS
+                {t('vps.addNew')}
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-zinc-900 border-zinc-800 max-w-lg">
               <DialogHeader>
-                <DialogTitle>Adicionar Servidor VPS</DialogTitle>
+                <DialogTitle>{t('vps.addNew')}</DialogTitle>
                 <DialogDescription className="text-zinc-500">
-                  Adicione as credenciais do seu servidor para fazer deploys
+                  {t('vps.subtitle')}
                 </DialogDescription>
               </DialogHeader>
               
               <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Nome</Label>
+                    <Label className="text-zinc-300">{t('vps.form.name')}</Label>
                     <Input
-                      placeholder="Meu Servidor"
+                      placeholder={t('vps.form.name')}
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       required
@@ -204,7 +206,7 @@ export default function VPSManagement() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Porta SSH</Label>
+                    <Label className="text-zinc-300">SSH Port</Label>
                     <Input
                       type="number"
                       placeholder="22"
@@ -218,9 +220,9 @@ export default function VPSManagement() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-zinc-300">Host / IP</Label>
+                  <Label className="text-zinc-300">{t('vps.form.host')}</Label>
                   <Input
-                    placeholder="192.168.1.1 ou meuserver.com"
+                    placeholder="192.168.1.1"
                     value={form.host}
                     onChange={(e) => setForm({ ...form, host: e.target.value })}
                     required
@@ -230,7 +232,7 @@ export default function VPSManagement() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-zinc-300">Usuário SSH</Label>
+                  <Label className="text-zinc-300">{t('vps.form.username')}</Label>
                   <Input
                     placeholder="root"
                     value={form.username}
@@ -242,7 +244,7 @@ export default function VPSManagement() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-zinc-300">Tipo de Autenticação</Label>
+                  <Label className="text-zinc-300">{t('common.cancel')}</Label>
                   <Select
                     value={form.auth_type}
                     onValueChange={(value) => setForm({ ...form, auth_type: value })}
@@ -251,15 +253,15 @@ export default function VPSManagement() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-zinc-800">
-                      <SelectItem value="password">Senha</SelectItem>
-                      <SelectItem value="key">Chave SSH</SelectItem>
+                      <SelectItem value="password">{t('vps.form.password')}</SelectItem>
+                      <SelectItem value="key">SSH Key</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 
                 {form.auth_type === "password" ? (
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Senha</Label>
+                    <Label className="text-zinc-300">{t('vps.form.password')}</Label>
                     <Input
                       type="password"
                       placeholder="••••••••"
@@ -272,7 +274,7 @@ export default function VPSManagement() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Chave SSH Privada</Label>
+                    <Label className="text-zinc-300">SSH Private Key</Label>
                     <Textarea
                       placeholder="-----BEGIN RSA PRIVATE KEY-----"
                       value={form.ssh_key}
@@ -292,7 +294,7 @@ export default function VPSManagement() {
                     onClick={() => setDialogOpen(false)}
                     className="border-zinc-700"
                   >
-                    Cancelar
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -303,9 +305,9 @@ export default function VPSManagement() {
                     {submitting ? (
                       <span className="flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Adicionando...
+                        {t('vps.form.adding')}
                       </span>
-                    ) : "Adicionar"}
+                    ) : t('vps.form.add')}
                   </Button>
                 </div>
               </form>
@@ -323,16 +325,16 @@ export default function VPSManagement() {
               <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
                 <Server className="w-8 h-8 text-zinc-500" />
               </div>
-              <h3 className="text-lg font-medium mb-2">Nenhum servidor cadastrado</h3>
+              <h3 className="text-lg font-medium mb-2">{t('vps.noVps')}</h3>
               <p className="text-zinc-500 text-center mb-6 max-w-md">
-                Adicione seu primeiro servidor VPS para começar a fazer deploys dos seus projetos.
+                {t('vps.addFirst')}
               </p>
               <Button
                 onClick={() => setDialogOpen(true)}
                 className="bg-green-500 hover:bg-green-600 text-black font-semibold"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Adicionar VPS
+                {t('vps.addNew')}
               </Button>
             </CardContent>
           </Card>
@@ -386,7 +388,7 @@ export default function VPSManagement() {
                       ) : (
                         <>
                           <Wifi className="w-4 h-4 mr-2" />
-                          Testar
+                          Test
                         </>
                       )}
                     </Button>
@@ -402,7 +404,7 @@ export default function VPSManagement() {
                       ) : (
                         <>
                           <Shield className="w-4 h-4 mr-2" />
-                          Segurança
+                          {t('vps.security')}
                         </>
                       )}
                     </Button>
@@ -428,7 +430,7 @@ export default function VPSManagement() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5" />
-                Relatório de Segurança
+                {t('vps.securityModal.title')}
               </DialogTitle>
               <DialogDescription className="text-zinc-500">
                 {securityReport?.vps_name} ({securityReport?.host})
@@ -481,7 +483,7 @@ export default function VPSManagement() {
                     onClick={() => setSecurityDialogOpen(false)}
                     className="flex-1 border-zinc-700"
                   >
-                    Fechar
+                    {t('common.close')}
                   </Button>
                   {securityReport.score < securityReport.max_score && (
                     <Button
@@ -497,7 +499,7 @@ export default function VPSManagement() {
                       ) : (
                         <ShieldCheck className="w-4 h-4 mr-2" />
                       )}
-                      Reforçar Segurança
+                      {t('vps.securityModal.harden')}
                     </Button>
                   )}
                 </div>
