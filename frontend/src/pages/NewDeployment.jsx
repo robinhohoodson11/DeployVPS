@@ -260,7 +260,7 @@ export default function NewDeployment() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Nome do Projeto</Label>
+                    <Label className="text-zinc-300">{t('newDeploy.form.projectName')}</Label>
                     <Input
                       placeholder="meu-projeto"
                       value={form.project_name}
@@ -275,7 +275,7 @@ export default function NewDeployment() {
                 {/* Port - Only show for non-fullstack deploys */}
                 {!form.create_mongodb && (
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Porta da Aplicação</Label>
+                    <Label className="text-zinc-300">{t('newDeploy.form.port')}</Label>
                     <Input
                       type="number"
                       placeholder="3000"
@@ -286,7 +286,7 @@ export default function NewDeployment() {
                       className="bg-zinc-800/50 border-zinc-700 font-mono w-32"
                     />
                     <p className="text-xs text-zinc-500">
-                      Porta em que sua aplicação roda (ex: 3000 para Node, 8000 para Python)
+                      {t('newDeploy.form.portHelp')}
                     </p>
                   </div>
                 )}
@@ -294,7 +294,7 @@ export default function NewDeployment() {
                 <div className="space-y-2">
                   <Label className="text-zinc-300 flex items-center gap-2">
                     <Key className="w-4 h-4" />
-                    Token GitHub (opcional)
+                    {t('newDeploy.form.githubToken')}
                   </Label>
                   <Input
                     type="password"
@@ -305,12 +305,12 @@ export default function NewDeployment() {
                     className="bg-zinc-800/50 border-zinc-700 font-mono"
                   />
                   <p className="text-xs text-zinc-500">
-                    Necessário apenas para repositórios privados
+                    {t('newDeploy.form.githubTokenHelp')}
                   </p>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-zinc-300">Variáveis de Ambiente (opcional)</Label>
+                  <Label className="text-zinc-300">{t('newDeploy.form.envVars')}</Label>
                   <Textarea
                     placeholder={"DATABASE_URL=postgres://...\nAPI_KEY=xxxxx"}
                     value={form.env_vars}
