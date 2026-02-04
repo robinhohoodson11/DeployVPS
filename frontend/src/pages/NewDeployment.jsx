@@ -137,10 +137,10 @@ export default function NewDeployment() {
       };
       
       const response = await api.post("/deployments", payload);
-      toast.success("Deploy iniciado!");
+      toast.success(t('common.success'));
       navigate(`/deploy/${response.data.id}`);
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao criar deployment");
+      toast.error(error.response?.data?.detail || t('common.error'));
     } finally {
       setSubmitting(false);
     }
@@ -163,17 +163,17 @@ export default function NewDeployment() {
           data-testid="back-btn"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar
+          {t('newDeploy.back')}
         </Button>
         
         <Card className="bg-zinc-900/50 border-zinc-800">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Rocket className="w-5 h-5 text-green-500" />
-              Novo Deployment
+              {t('newDeploy.title')}
             </CardTitle>
             <CardDescription className="text-zinc-500">
-              Configure o deploy do seu projeto GitHub para a VPS
+              {t('newDeploy.subtitle')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -184,16 +184,16 @@ export default function NewDeployment() {
             ) : vpsList.length === 0 ? (
               <div className="text-center py-12">
                 <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Nenhum servidor cadastrado</h3>
+                <h3 className="text-lg font-medium mb-2">{t('newDeploy.noVps.title')}</h3>
                 <p className="text-zinc-500 mb-6">
-                  Você precisa adicionar um servidor VPS antes de fazer um deploy.
+                  {t('newDeploy.noVps.subtitle')}
                 </p>
                 <Button
                   onClick={() => navigate("/vps")}
                   className="bg-green-500 hover:bg-green-600 text-black font-semibold"
                 >
                   <Server className="w-4 h-4 mr-2" />
-                  Adicionar VPS
+                  {t('newDeploy.noVps.addVps')}
                 </Button>
               </div>
             ) : (
