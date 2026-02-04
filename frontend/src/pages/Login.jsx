@@ -121,15 +121,15 @@ export default function Login() {
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                    Entrando...
+                    {t('common.loading')}
                   </span>
-                ) : "Entrar"}
+                ) : t('auth.login.submit')}
               </Button>
             </form>
             <p className="mt-6 text-center text-sm text-zinc-500">
-              Não tem uma conta?{" "}
+              {t('auth.login.noAccount')}{" "}
               <Link to="/register" className="text-green-500 hover:text-green-400 font-medium" data-testid="register-link">
-                Criar conta
+                {t('auth.login.register')}
               </Link>
             </p>
           </CardContent>
