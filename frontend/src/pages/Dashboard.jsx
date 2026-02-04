@@ -137,7 +137,7 @@ export default function Dashboard() {
 
         {/* Actions */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold tracking-tight">Deployments</h2>
+          <h2 className="text-xl font-semibold tracking-tight">{t('dashboard.title')}</h2>
           <div className="flex gap-3">
             <Button
               variant="outline"
@@ -146,7 +146,7 @@ export default function Dashboard() {
               className="border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Atualizar
+              {t('details.redeploy')}
             </Button>
             <Button
               onClick={() => navigate("/deploy/new")}
@@ -154,7 +154,7 @@ export default function Dashboard() {
               className="bg-green-500 hover:bg-green-600 text-black font-semibold btn-glow"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Novo Deploy
+              {t('dashboard.newDeploy')}
             </Button>
           </div>
         </div>
