@@ -464,10 +464,9 @@ export default function NewDeployment() {
                         </div>
                         
                         <div className="bg-zinc-800/50 rounded p-3 text-xs">
-                          <p className="text-yellow-500 font-medium mb-1">⚠️ Importante:</p>
+                          <p className="text-yellow-500 font-medium mb-1">⚠️ {t('common.warning')}:</p>
                           <p className="text-zinc-400">
-                            As credenciais serão exibidas nos logs após o deploy. 
-                            Recomenda-se alterar a senha no primeiro acesso.
+                            {t('newDeploy.fullstack.warning')}
                           </p>
                         </div>
                       </div>
@@ -482,7 +481,7 @@ export default function NewDeployment() {
                     onClick={() => navigate("/")}
                     className="border-zinc-700"
                   >
-                    Cancelar
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -493,12 +492,12 @@ export default function NewDeployment() {
                     {submitting ? (
                       <span className="flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Iniciando...
+                        {t('newDeploy.submitting')}
                       </span>
                     ) : (
                       <>
                         <Rocket className="w-4 h-4 mr-2" />
-                        Iniciar Deploy
+                        {t('newDeploy.submit')}
                       </>
                     )}
                   </Button>
