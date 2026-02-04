@@ -384,28 +384,28 @@ export default function NewDeployment() {
                       {/* Suggested Ports Display */}
                       <div className="bg-zinc-800/50 rounded-lg p-4 space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-zinc-400 font-medium">Portas Selecionadas:</span>
+                          <span className="text-sm text-zinc-400 font-medium">{t('newDeploy.form.selectedPorts')}:</span>
                           {loadingPorts && <Loader2 className="w-4 h-4 animate-spin text-green-500" />}
                         </div>
                         
                         <div className="grid grid-cols-3 gap-4">
                           <div className="bg-zinc-900 rounded p-3 text-center">
-                            <p className="text-xs text-zinc-500 mb-1">Frontend</p>
+                            <p className="text-xs text-zinc-500 mb-1">{t('newDeploy.form.frontend')}</p>
                             <p className="text-lg font-mono text-green-500">{form.port}</p>
                           </div>
                           <div className="bg-zinc-900 rounded p-3 text-center">
-                            <p className="text-xs text-zinc-500 mb-1">Backend</p>
+                            <p className="text-xs text-zinc-500 mb-1">{t('newDeploy.form.backend')}</p>
                             <p className="text-lg font-mono text-blue-500">{form.backend_port}</p>
                           </div>
                           <div className="bg-zinc-900 rounded p-3 text-center">
-                            <p className="text-xs text-zinc-500 mb-1">MongoDB</p>
+                            <p className="text-xs text-zinc-500 mb-1">{t('newDeploy.form.mongodb')}</p>
                             <p className="text-lg font-mono text-yellow-500">{form.mongodb_port}</p>
                           </div>
                         </div>
                         
                         {suggestedPorts && (
                           <p className="text-xs text-green-500 text-center">
-                            ✓ Portas verificadas e disponíveis no VPS
+                            ✓ {t('newDeploy.form.portsVerified')}
                           </p>
                         )}
                       </div>
@@ -427,7 +427,7 @@ export default function NewDeployment() {
                       <div className="flex items-center gap-2">
                         <Key className="w-4 h-4 text-yellow-500" />
                         <Label htmlFor="create_admin" className="text-zinc-300 cursor-pointer">
-                          Criar usuário admin automaticamente
+                          {t('newDeploy.fullstack.createAdmin')}
                         </Label>
                       </div>
                     </div>
@@ -435,13 +435,12 @@ export default function NewDeployment() {
                     {form.create_admin && (
                       <div className="ml-6 space-y-4">
                         <p className="text-xs text-zinc-500 mb-3">
-                          Após o deploy, um usuário administrador será criado automaticamente no banco de dados.
-                          Você poderá usar essas credenciais para fazer login no sistema.
+                          {t('newDeploy.fullstack.adminHelp')}
                         </p>
                         
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label className="text-zinc-400 text-sm">Email do Admin</Label>
+                            <Label className="text-zinc-400 text-sm">{t('newDeploy.fullstack.adminEmail')}</Label>
                             <Input
                               type="email"
                               placeholder="admin@admin.com"
