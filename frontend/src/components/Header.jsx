@@ -87,7 +87,7 @@ export default function Header() {
                 className="text-sm text-zinc-400 hover:text-white transition-colors"
                 data-testid="nav-dashboard"
               >
-                Dashboard
+                {t('header.dashboard')}
               </Link>
               <Link 
                 to="/vps" 
@@ -95,7 +95,7 @@ export default function Header() {
                 data-testid="nav-vps"
               >
                 <Server className="w-4 h-4" />
-                Servidores
+                {t('header.vps')}
               </Link>
               
               {user?.role === "admin" && (
@@ -108,6 +108,8 @@ export default function Header() {
                   Admin
                 </Link>
               )}
+              
+              <LanguageSelector />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
