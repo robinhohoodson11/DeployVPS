@@ -110,13 +110,13 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/register">
               <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-lg px-8 py-6">
-                Começar Agora
+                {t('landing.hero.cta')}
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
             <Link to="/login">
               <Button size="lg" variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-lg px-8 py-6">
-                Já tenho conta
+                {t('landing.hero.login')}
               </Button>
             </Link>
           </div>
@@ -130,14 +130,13 @@ export default function LandingPage() {
             <div className="flex-1 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm mb-4">
                 <Zap className="w-4 h-4" />
-                Integração Perfeita
+                {t('landing.emergent.title')}
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                Criou no Emergent? Faça deploy na sua própria VPS!
+                {t('landing.emergent.subtitle')}
               </h2>
               <p className="text-zinc-400 text-lg">
-                Projetos criados no <span className="text-purple-400 font-semibold">Emergent.sh</span> são 100% compatíveis. 
-                Exporte seu repositório do GitHub e tenha controle total hospedando em sua própria infraestrutura.
+                {t('landing.emergent.description')}
               </p>
             </div>
             <div className="flex-shrink-0">
