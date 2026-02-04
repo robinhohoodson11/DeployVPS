@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
+import { useLanguage } from "../i18n/LanguageContext";
+import LanguageSelector from "../components/LanguageSelector";
 import { 
   Rocket, 
   Server, 
@@ -18,36 +20,38 @@ import {
 } from "lucide-react";
 
 export default function LandingPage() {
+  const { t } = useLanguage();
+  
   const features = [
     {
       icon: <Rocket className="w-8 h-8" />,
-      title: "Deploy em Minutos",
-      description: "Conecte seu repositório GitHub e faça deploy automático em sua VPS com apenas alguns cliques."
+      title: t('landing.features.items.autoDeploy.title'),
+      description: t('landing.features.items.autoDeploy.description')
     },
     {
       icon: <Server className="w-8 h-8" />,
-      title: "Múltiplas VPS",
-      description: "Gerencie várias VPS em um único painel. Organize seus projetos por servidor."
+      title: t('landing.features.items.multiServer.title'),
+      description: t('landing.features.items.multiServer.description')
     },
     {
       icon: <Database className="w-8 h-8" />,
-      title: "MongoDB Automático",
-      description: "Crie instâncias MongoDB automaticamente para seus projetos fullstack."
+      title: t('landing.features.items.mongodb.title'),
+      description: t('landing.features.items.mongodb.description')
     },
     {
       icon: <Globe className="w-8 h-8" />,
-      title: "Domínio & SSL",
-      description: "Configure domínios personalizados e SSL gratuito com Let's Encrypt."
-    },
-    {
-      icon: <GitBranch className="w-8 h-8" />,
-      title: "Integração GitHub",
-      description: "Suporte a repositórios públicos e privados. Deploy de qualquer branch."
+      title: t('landing.features.items.ssl.title'),
+      description: t('landing.features.items.ssl.description')
     },
     {
       icon: <RefreshCw className="w-8 h-8" />,
-      title: "Redeploy Inteligente",
-      description: "Atualize seu código sem perder dados. O banco de dados é preservado."
+      title: t('landing.features.items.backup.title'),
+      description: t('landing.features.items.backup.description')
+    },
+    {
+      icon: <Shield className="w-8 h-8" />,
+      title: t('landing.features.items.security.title'),
+      description: t('landing.features.items.security.description')
     }
   ];
 
