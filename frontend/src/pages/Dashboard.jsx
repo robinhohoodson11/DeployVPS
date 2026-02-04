@@ -96,7 +96,7 @@ export default function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-zinc-500 uppercase tracking-wider">Rodando</p>
+                  <p className="text-sm text-zinc-500 uppercase tracking-wider">{t('dashboard.status.running')}</p>
                   <p className="text-3xl font-bold font-mono mt-1 text-green-500">{runningCount}</p>
                 </div>
                 <div className="w-12 h-12 rounded bg-green-500/10 flex items-center justify-center">
@@ -110,7 +110,7 @@ export default function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-zinc-500 uppercase tracking-wider">Em Progresso</p>
+                  <p className="text-sm text-zinc-500 uppercase tracking-wider">{t('dashboard.status.building')}</p>
                   <p className="text-3xl font-bold font-mono mt-1 text-yellow-500">{pendingCount}</p>
                 </div>
                 <div className="w-12 h-12 rounded bg-yellow-500/10 flex items-center justify-center">
@@ -124,7 +124,7 @@ export default function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-zinc-500 uppercase tracking-wider">Servidores VPS</p>
+                  <p className="text-sm text-zinc-500 uppercase tracking-wider">{t('header.vps')}</p>
                   <p className="text-3xl font-bold font-mono mt-1">{vpsCount}</p>
                 </div>
                 <div className="w-12 h-12 rounded bg-zinc-800 flex items-center justify-center">
