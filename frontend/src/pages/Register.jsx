@@ -61,12 +61,15 @@ export default function Register() {
   if (pendingMessage) {
     return (
       <div className="min-h-screen bg-[#09090b] grid-pattern flex items-center justify-center p-8">
+        <div className="absolute top-4 right-4 z-50">
+          <LanguageSelector />
+        </div>
         <Card className="w-full max-w-md bg-[#09090b] border-zinc-800">
           <CardHeader className="space-y-1 text-center">
             <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-4">
               <Clock className="w-8 h-8 text-yellow-500" />
             </div>
-            <CardTitle className="text-2xl font-bold tracking-tight">Cadastro Recebido!</CardTitle>
+            <CardTitle className="text-2xl font-bold tracking-tight">{t('common.success')}!</CardTitle>
             <CardDescription className="text-zinc-400 text-base">
               {pendingMessage}
             </CardDescription>
@@ -75,15 +78,12 @@ export default function Register() {
             <div className="bg-zinc-800/50 rounded-lg p-4 space-y-2">
               <div className="flex items-center gap-2 text-sm text-zinc-400">
                 <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>Email cadastrado: <strong className="text-zinc-200">{email}</strong></span>
+                <span>Email: <strong className="text-zinc-200">{email}</strong></span>
               </div>
-              <p className="text-xs text-zinc-500">
-                Você receberá um email quando sua conta for aprovada.
-              </p>
             </div>
             <Link to="/login">
               <Button variant="outline" className="w-full border-zinc-700">
-                Voltar para Login
+                {t('auth.register.login')}
               </Button>
             </Link>
           </CardContent>
@@ -94,6 +94,9 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-[#09090b] grid-pattern flex items-center justify-center p-8">
+      <div className="absolute top-4 right-4 z-50">
+        <LanguageSelector />
+      </div>
       <Card className="w-full max-w-md bg-[#09090b] border-zinc-800">
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2 mb-4">
@@ -102,9 +105,9 @@ export default function Register() {
             </div>
             <span className="text-xl font-bold">DeployVPS</span>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Criar conta</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">{t('auth.register.title')}</CardTitle>
           <CardDescription className="text-zinc-500">
-            Crie sua conta para começar a fazer deploys
+            {t('auth.register.subtitle')}
           </CardDescription>
         </CardHeader>
         <CardContent>
