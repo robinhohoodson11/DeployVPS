@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, api } from "../App";
+import { useLanguage } from "../i18n/LanguageContext";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -19,10 +20,12 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { toast } from "sonner";
-import { Terminal, Server, LogOut, User, ChevronDown, Shield, Key, Loader2 } from "lucide-react";
+import { Terminal, Server, LogOut, User, ChevronDown, Shield, Key, Loader2, Globe } from "lucide-react";
+import LanguageSelector from "./LanguageSelector";
 
 export default function Header() {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
