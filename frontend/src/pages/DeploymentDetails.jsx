@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../App";
+import { useLanguage } from "../i18n/LanguageContext";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -117,6 +118,7 @@ function LogStep({ step, logs, isActive, isCompleted, isFailed }) {
 }
 
 export default function DeploymentDetails() {
+  const { t } = useLanguage();
   const { id } = useParams();
   const navigate = useNavigate();
   const [deployment, setDeployment] = useState(null);
@@ -496,7 +498,7 @@ export default function DeploymentDetails() {
           data-testid="back-btn"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar
+          {t('details.back')}
         </Button>
         
         {/* Header Card */}
@@ -534,7 +536,7 @@ export default function DeploymentDetails() {
                     ) : (
                       <XCircle className="w-4 h-4 mr-2" />
                     )}
-                    Cancelar
+                    {t('details.cancel')}
                   </Button>
                 )}
                 
@@ -585,12 +587,12 @@ export default function DeploymentDetails() {
           <div className="space-y-4">
             <Card className="bg-zinc-900/50 border-zinc-800">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-400">Informações</CardTitle>
+                <CardTitle className="text-sm font-medium text-zinc-400">{t('details.info.title')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {deployment.deploy_type && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-zinc-500">Tipo</span>
+                    <span className="text-zinc-500">{t('details.info.type')}</span>
                     <span className={`font-mono text-xs px-2 py-0.5 rounded ${
                       deployment.deploy_type === 'fullstack' ? 'bg-purple-500/20 text-purple-400' :
                       deployment.deploy_type === 'backend_only' ? 'bg-blue-500/20 text-blue-400' :
@@ -601,12 +603,12 @@ export default function DeploymentDetails() {
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Porta Frontend</span>
+                  <span className="text-zinc-500">{t('details.info.frontend')}</span>
                   <span className="font-mono">{deployment.port}</span>
                 </div>
                 {deployment.backend_port && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-zinc-500">Porta Backend</span>
+                    <span className="text-zinc-500">{t('details.info.backend')}</span>
                     <span className="font-mono">{deployment.backend_port}</span>
                   </div>
                 )}
@@ -617,7 +619,7 @@ export default function DeploymentDetails() {
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Criado em</span>
+                  <span className="text-zinc-500">{t('details.info.created')}</span>
                   <span className="font-mono text-xs">
                     {new Date(deployment.created_at).toLocaleString("pt-BR")}
                   </span>
@@ -631,12 +633,12 @@ export default function DeploymentDetails() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-yellow-500 flex items-center gap-2">
                     <Lock className="w-4 h-4" />
-                    Credenciais Admin
+                    {t('details.admin.title')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex justify-between text-sm items-center">
-                    <span className="text-zinc-500">Email</span>
+                    <span className="text-zinc-500">{t('details.admin.email')}</span>
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-yellow-400">{deployment.admin_credentials.email}</span>
                       <Button
@@ -650,7 +652,7 @@ export default function DeploymentDetails() {
                     </div>
                   </div>
                   <div className="flex justify-between text-sm items-center">
-                    <span className="text-zinc-500">Senha</span>
+                    <span className="text-zinc-500">{t('details.admin.password')}</span>
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-yellow-400">{deployment.admin_credentials.password}</span>
                       <Button
@@ -664,7 +666,7 @@ export default function DeploymentDetails() {
                     </div>
                   </div>
                   <p className="text-xs text-zinc-500 pt-2 border-t border-yellow-500/20">
-                    ⚠️ Altere a senha no primeiro acesso
+                    ⚠️ {t('common.warning')}
                   </p>
                 </CardContent>
               </Card>
@@ -696,7 +698,7 @@ export default function DeploymentDetails() {
                       className="w-full mt-2 border-zinc-700 hover:bg-zinc-800"
                     >
                       <ExternalLink className="w-4 h-4 mr-2" />
-                      Abrir App
+                      {t('details.openApp')}
                     </Button>
                   )}
                 </CardContent>
@@ -708,7 +710,7 @@ export default function DeploymentDetails() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-zinc-400 flex items-center gap-2">
                   <Globe className="w-4 h-4" />
-                  Domínio
+                  {t('details.domain.title')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -739,7 +741,7 @@ export default function DeploymentDetails() {
                       ) : (
                         <ShieldCheck className="w-4 h-4 mr-2" />
                       )}
-                      Ativar HTTPS (SSL)
+                      {t('details.domain.enableSsl')}
                     </Button>
                     
                     <Button
@@ -752,7 +754,7 @@ export default function DeploymentDetails() {
                       {actionLoading === "removeDomain" ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        "Remover Domínio"
+                        t('details.domain.removeDomain')
                       )}
                     </Button>
                   </div>
@@ -766,14 +768,14 @@ export default function DeploymentDetails() {
                         className="w-full border-zinc-700 border-dashed hover:bg-zinc-800"
                       >
                         <Globe className="w-4 h-4 mr-2" />
-                        Configurar Domínio
+                        {t('details.domain.configure')}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="bg-zinc-900 border-zinc-800 max-w-lg">
                       <DialogHeader>
-                        <DialogTitle>Configurar Domínio</DialogTitle>
+                        <DialogTitle>{t('details.domain.configure')}</DialogTitle>
                         <DialogDescription className="text-zinc-500">
-                          Configure um domínio personalizado para sua aplicação
+                          {t('details.domain.title')}
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 mt-4">
@@ -829,7 +831,7 @@ export default function DeploymentDetails() {
                             onClick={() => setDomainDialogOpen(false)}
                             className="border-zinc-700"
                           >
-                            Cancelar
+                            {t('common.cancel')}
                           </Button>
                           <Button
                             onClick={handleConfigureDomain}
@@ -840,7 +842,7 @@ export default function DeploymentDetails() {
                             {actionLoading === "domain" ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
-                              "Configurar"
+                              t('details.domain.save')
                             )}
                           </Button>
                         </div>
@@ -857,7 +859,7 @@ export default function DeploymentDetails() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-zinc-400 flex items-center gap-2">
                     <Database className="w-4 h-4" />
-                    Backup MongoDB
+                    {t('details.backup.title')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -874,7 +876,7 @@ export default function DeploymentDetails() {
                     ) : (
                       <HardDrive className="w-4 h-4 mr-2" />
                     )}
-                    Criar Backup Agora
+                    {t('details.backup.createNow')}
                   </Button>
                   
                   <Dialog open={backupDialogOpen} onOpenChange={setBackupDialogOpen}>
@@ -885,17 +887,17 @@ export default function DeploymentDetails() {
                         className="w-full border-zinc-700"
                       >
                         <Settings className="w-4 h-4 mr-2" />
-                        Gerenciar Backups ({backups.length})
+                        {t('details.backup.manage')} ({backups.length})
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl max-h-[80vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                           <Database className="w-5 h-5" />
-                          Gerenciar Backups
+                          {t('details.backup.modalTitle')}
                         </DialogTitle>
                         <DialogDescription className="text-zinc-500">
-                          Gerencie os backups do banco de dados MongoDB
+                          {t('details.backup.modalSubtitle')}
                         </DialogDescription>
                       </DialogHeader>
                       
@@ -904,13 +906,13 @@ export default function DeploymentDetails() {
                         <div className="bg-zinc-800/50 rounded-lg p-4 space-y-4">
                           <h4 className="font-medium text-zinc-300 flex items-center gap-2">
                             <Settings className="w-4 h-4" />
-                            Configurações de Backup Automático
+                            {t('details.backup.autoBackup')}
                           </h4>
                           
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-sm text-zinc-300">Backup Automático</p>
-                              <p className="text-xs text-zinc-500">Criar backups automaticamente</p>
+                              <p className="text-sm text-zinc-300">{t('details.backup.autoBackup')}</p>
+                              <p className="text-xs text-zinc-500">{t('details.backup.autoBackupDesc')}</p>
                             </div>
                             <Switch
                               checked={backupSettings.auto_backup_enabled}
@@ -924,7 +926,7 @@ export default function DeploymentDetails() {
                           {backupSettings.auto_backup_enabled && (
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <Label className="text-zinc-400 text-sm">Intervalo (horas)</Label>
+                                <Label className="text-zinc-400 text-sm">{t('details.backup.interval')}</Label>
                                 <select
                                   value={backupSettings.auto_backup_interval_hours}
                                   onChange={(e) => {
@@ -933,15 +935,15 @@ export default function DeploymentDetails() {
                                   }}
                                   className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm"
                                 >
-                                  <option value={1}>1 hora</option>
-                                  <option value={6}>6 horas</option>
-                                  <option value={12}>12 horas</option>
-                                  <option value={24}>24 horas (Diário)</option>
-                                  <option value={168}>168 horas (Semanal)</option>
+                                  <option value={1}>1h</option>
+                                  <option value={6}>6h</option>
+                                  <option value={12}>12h</option>
+                                  <option value={24}>24h</option>
+                                  <option value={168}>168h</option>
                                 </select>
                               </div>
                               <div className="space-y-2">
-                                <Label className="text-zinc-400 text-sm">Máx. Backups</Label>
+                                <Label className="text-zinc-400 text-sm">{t('details.backup.maxBackups')}</Label>
                                 <select
                                   value={backupSettings.max_backups}
                                   onChange={(e) => {
@@ -964,14 +966,14 @@ export default function DeploymentDetails() {
                         <div className="space-y-3">
                           <h4 className="font-medium text-zinc-300 flex items-center gap-2">
                             <Calendar className="w-4 h-4" />
-                            Backups Disponíveis
+                            {t('details.backup.available')}
                           </h4>
                           
                           {backups.length === 0 ? (
                             <div className="text-center py-8 text-zinc-500">
                               <Database className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                              <p>Nenhum backup disponível</p>
-                              <p className="text-xs mt-1">Clique em "Criar Backup Agora" para começar</p>
+                              <p>{t('details.backup.noBackups')}</p>
+                              <p className="text-xs mt-1">{t('details.backup.noBackupsHelp')}</p>
                             </div>
                           ) : (
                             <div className="space-y-2">
@@ -1026,10 +1028,10 @@ export default function DeploymentDetails() {
                         <div className="bg-zinc-800/50 rounded-lg p-4 space-y-3">
                           <h4 className="font-medium text-zinc-300 flex items-center gap-2">
                             <Upload className="w-4 h-4" />
-                            Importar Backup
+                            {t('details.backup.import')}
                           </h4>
                           <p className="text-xs text-zinc-500">
-                            Importe um backup (.gz) de outro projeto ou VPS para restaurar os dados aqui.
+                            {t('details.backup.importHelp')}
                           </p>
                           <div className="flex items-center gap-3">
                             <input
@@ -1052,18 +1054,18 @@ export default function DeploymentDetails() {
                               ) : (
                                 <Upload className="w-4 h-4 mr-2" />
                               )}
-                              Selecionar Arquivo .gz
+                              {t('details.backup.selectFile')}
                             </Button>
                           </div>
                         </div>
                         
                         <div className="bg-blue-500/10 rounded-lg p-3 text-sm">
-                          <p className="text-blue-400 font-medium">💡 Dica</p>
+                          <p className="text-blue-400 font-medium">💡 {t('details.backup.tip')}</p>
                           <p className="text-zinc-400 text-xs mt-1">
-                            Os backups são salvos no VPS em: <code className="bg-zinc-800 px-1 rounded">/var/backups/deployvps/{deployment.project_name}/</code>
+                            {t('details.backup.tipText')} <code className="bg-zinc-800 px-1 rounded">/var/backups/deployvps/{deployment.project_name}/</code>
                           </p>
                           <p className="text-zinc-400 text-xs mt-1">
-                            Você pode baixar um backup e importá-lo em outro projeto ou VPS para migrar os dados.
+                            {t('details.backup.tipMigrate')}
                           </p>
                         </div>
                       </div>
@@ -1080,7 +1082,7 @@ export default function DeploymentDetails() {
               <CardHeader className="pb-2 flex-shrink-0 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium text-zinc-400 flex items-center gap-2">
                   <Terminal className="w-4 h-4" />
-                  Progresso do Deploy
+                  {t('details.logs.title')}
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -1088,7 +1090,7 @@ export default function DeploymentDetails() {
                   onClick={() => setShowAllLogs(!showAllLogs)}
                   className="text-xs text-zinc-500 hover:text-zinc-300"
                 >
-                  {showAllLogs ? "Ver Resumido" : "Ver Todos os Logs"}
+                  {showAllLogs ? t('details.logs.hideOld') : t('details.logs.showAll')}
                 </Button>
               </CardHeader>
               <CardContent className="flex-1 overflow-hidden p-4">
@@ -1127,7 +1129,7 @@ export default function DeploymentDetails() {
                           >
                             <div className="flex items-center gap-3">
                               <Terminal className="w-5 h-5 text-zinc-500" />
-                              <span className="font-medium text-zinc-400">Logs do Container</span>
+                              <span className="font-medium text-zinc-400">{t('details.logs.containerLogs')}</span>
                             </div>
                             <span className="text-xs text-zinc-500">{containerLogs.length} linha(s)</span>
                           </button>
@@ -1179,7 +1181,7 @@ export default function DeploymentDetails() {
                       
                       {(deployment.logs?.length === 0 && containerLogs.length === 0) && (
                         <div className="text-zinc-600 text-center py-8">
-                          Aguardando logs...
+                          {t('details.logs.noLogs')}
                         </div>
                       )}
                       
