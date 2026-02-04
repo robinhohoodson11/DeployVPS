@@ -320,7 +320,7 @@ export default function NewDeployment() {
                     className="bg-zinc-800/50 border-zinc-700 font-mono text-sm"
                   />
                   <p className="text-xs text-zinc-500">
-                    Uma variável por linha no formato KEY=value
+                    {t('newDeploy.form.envVarsHelp')}
                   </p>
                 </div>
                 
@@ -342,7 +342,7 @@ export default function NewDeployment() {
                     <div className="flex items-center gap-2">
                       <Database className="w-4 h-4 text-green-500" />
                       <Label htmlFor="create_mongodb" className="text-zinc-300 cursor-pointer">
-                        Deploy Fullstack (com MongoDB)
+                        {t('newDeploy.fullstack.title')}
                       </Label>
                     </div>
                   </div>
@@ -350,7 +350,7 @@ export default function NewDeployment() {
                   {form.create_mongodb && (
                     <div className="ml-6 space-y-4 border-l-2 border-green-500/30 pl-4">
                       <div className="space-y-2">
-                        <Label className="text-zinc-400 text-sm">Porta Base</Label>
+                        <Label className="text-zinc-400 text-sm">{t('newDeploy.form.basePort')}</Label>
                         <div className="flex items-center gap-3">
                           <Input
                             type="number"
@@ -373,11 +373,11 @@ export default function NewDeployment() {
                             ) : (
                               <RefreshCw className="w-4 h-4 mr-2" />
                             )}
-                            Verificar Portas
+                            {t('newDeploy.form.checkPorts')}
                           </Button>
                         </div>
                         <p className="text-xs text-zinc-500">
-                          O sistema buscará automaticamente portas disponíveis a partir desta base
+                          {t('newDeploy.form.basePortHelp')}
                         </p>
                       </div>
                       
