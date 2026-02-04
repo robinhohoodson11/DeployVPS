@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, useAuth } from "../App";
+import { useLanguage } from "../i18n/LanguageContext";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -11,21 +12,22 @@ import {
 } from "lucide-react";
 import Header from "../components/Header";
 
-const statusConfig = {
-  running: { label: "Rodando", color: "bg-green-500", textColor: "text-green-500" },
-  pending: { label: "Pendente", color: "bg-yellow-500", textColor: "text-yellow-500" },
-  cloning: { label: "Clonando", color: "bg-purple-500", textColor: "text-purple-500" },
-  building: { label: "Construindo", color: "bg-blue-500", textColor: "text-blue-500" },
-  deploying: { label: "Deployando", color: "bg-amber-500", textColor: "text-amber-500" },
-  failed: { label: "Falhou", color: "bg-red-500", textColor: "text-red-500" },
-  stopped: { label: "Parado", color: "bg-zinc-500", textColor: "text-zinc-500" },
-};
-
 export default function Dashboard() {
   const [deployments, setDeployments] = useState([]);
   const [vpsCount, setVpsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  const statusConfig = {
+    running: { label: t('dashboard.status.running'), color: "bg-green-500", textColor: "text-green-500" },
+    pending: { label: t('dashboard.status.pending'), color: "bg-yellow-500", textColor: "text-yellow-500" },
+    cloning: { label: t('dashboard.status.pending'), color: "bg-purple-500", textColor: "text-purple-500" },
+    building: { label: t('dashboard.status.building'), color: "bg-blue-500", textColor: "text-blue-500" },
+    deploying: { label: t('dashboard.status.building'), color: "bg-amber-500", textColor: "text-amber-500" },
+    failed: { label: t('dashboard.status.failed'), color: "bg-red-500", textColor: "text-red-500" },
+    stopped: { label: t('dashboard.status.stopped'), color: "bg-zinc-500", textColor: "text-zinc-500" },
+  };
 
   const fetchData = async (isInitial = false) => {
     try {
@@ -37,7 +39,7 @@ export default function Dashboard() {
       setVpsCount(vpsRes.data.length);
     } catch (error) {
       if (isInitial) {
-        toast.error("Erro ao carregar dados");
+        toast.error(t('common.error'));
       }
     } finally {
       if (isInitial) {
