@@ -76,14 +76,15 @@ export default function LandingPage() {
             <span className="text-xl font-bold text-white">DeployVPS</span>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSelector />
             <Link to="/login">
               <Button variant="ghost" className="text-zinc-400 hover:text-white">
-                Entrar
+                {t('landing.hero.login')}
               </Button>
             </Link>
             <Link to="/register">
               <Button className="bg-emerald-600 hover:bg-emerald-700">
-                Criar Conta
+                {t('landing.hero.cta')}
               </Button>
             </Link>
           </div>
@@ -95,17 +96,15 @@ export default function LandingPage() {
         <div className="container mx-auto text-center max-w-4xl">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm mb-8">
             <Zap className="w-4 h-4" />
-            Deploy automatizado para suas VPS
+            {t('landing.hero.title')}
           </div>
           
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
-            Faça deploy dos seus projetos
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600"> em segundos</span>
+            {t('landing.hero.title')}
           </h1>
           
           <p className="text-xl text-zinc-400 mb-10 max-w-2xl mx-auto">
-            Conecte seu GitHub, escolha sua VPS e deixe o DeployVPS fazer o resto. 
-            Deploy automático com MongoDB, SSL e domínio personalizado.
+            {t('landing.hero.subtitle')}
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
