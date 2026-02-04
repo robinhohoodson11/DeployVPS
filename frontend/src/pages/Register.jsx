@@ -184,9 +184,9 @@ export default function Register() {
             </p>
           </div>
           <p className="mt-4 text-center text-sm text-zinc-500">
-            Já tem uma conta?{" "}
+            {t('auth.register.hasAccount')}{" "}
             <Link to="/login" className="text-green-500 hover:text-green-400 font-medium" data-testid="login-link">
-              Entrar
+              {t('auth.register.login')}
             </Link>
           </p>
         </CardContent>
