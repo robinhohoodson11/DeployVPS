@@ -201,14 +201,14 @@ export default function NewDeployment() {
                 <div className="space-y-2">
                   <Label className="text-zinc-300 flex items-center gap-2">
                     <Server className="w-4 h-4" />
-                    Servidor VPS
+                    {t('newDeploy.form.vps')}
                   </Label>
                   <Select
                     value={form.vps_id}
                     onValueChange={(value) => setForm({ ...form, vps_id: value })}
                   >
                     <SelectTrigger className="bg-zinc-800/50 border-zinc-700" data-testid="vps-select">
-                      <SelectValue placeholder="Selecione um servidor" />
+                      <SelectValue placeholder={t('newDeploy.form.selectVps')} />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-zinc-800">
                       {vpsList.map((vps) => (
@@ -226,7 +226,7 @@ export default function NewDeployment() {
                 <div className="space-y-2">
                   <Label className="text-zinc-300 flex items-center gap-2">
                     <GitBranch className="w-4 h-4" />
-                    URL do Repositório GitHub
+                    {t('newDeploy.form.repoUrl')}
                   </Label>
                   <Input
                     placeholder="https://github.com/usuario/projeto"
@@ -243,13 +243,13 @@ export default function NewDeployment() {
                     className="bg-zinc-800/50 border-zinc-700 font-mono"
                   />
                   <p className="text-xs text-zinc-500">
-                    Para repositórios privados, forneça o token GitHub abaixo
+                    {t('newDeploy.form.githubTokenHelp')}
                   </p>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Branch</Label>
+                    <Label className="text-zinc-300">{t('newDeploy.form.branch')}</Label>
                     <Input
                       placeholder="main"
                       value={form.branch}
