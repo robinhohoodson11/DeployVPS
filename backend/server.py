@@ -2141,19 +2141,27 @@ async def delete_deployment(deployment_id: str, user: dict = Depends(get_current
                 if result:
                     cleanup_log.append(result)
             
-            # 3. Remove Docker volumes (MongoDB data)
-            volume_name = f"mongodb_data_{project_name}"
-            stdin, stdout, stderr = ssh.exec_command(f"docker volume rm {volume_name} 2>/dev/null && echo 'Removed volume {volume_name}'")
-            result = stdout.read().decode().strip()
-            if result:
-                cleanup_log.append(result)
+            # 3. Remove Docker volumes (MongoDB data) - try both naming patterns
+            volume_names = [
+                f"mongodb_data_{project_name}",
+                f"mongodb_{project_name}_data",
+            ]
+            for volume_name in volume_names:
+                stdin, stdout, stderr = ssh.exec_command(f"docker volume rm {volume_name} 2>/dev/null && echo 'Removed volume {volume_name}'")
+                result = stdout.read().decode().strip()
+                if result:
+                    cleanup_log.append(result)
             
-            # 4. Remove Docker network
-            network_name = f"network_{project_name}"
-            stdin, stdout, stderr = ssh.exec_command(f"docker network rm {network_name} 2>/dev/null && echo 'Removed network {network_name}'")
-            result = stdout.read().decode().strip()
-            if result:
-                cleanup_log.append(result)
+            # 4. Remove Docker network - try both naming patterns
+            network_names = [
+                f"network_{project_name}",
+                f"{project_name}_network",
+            ]
+            for network_name in network_names:
+                stdin, stdout, stderr = ssh.exec_command(f"docker network rm {network_name} 2>/dev/null && echo 'Removed network {network_name}'")
+                result = stdout.read().decode().strip()
+                if result:
+                    cleanup_log.append(result)
             
             # 5. Remove deployment directory and all files
             base_dir = f"/opt/deployments/{project_name}"
