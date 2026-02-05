@@ -239,19 +239,19 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="text-3xl md:text-4xl font-bold text-emerald-500 mb-2">5min</div>
-              <div className="text-zinc-400">Tempo médio de deploy</div>
+              <div className="text-zinc-400">{t('landing.stats.deployTime')}</div>
             </div>
             <div className="text-center">
               <div className="text-3xl md:text-4xl font-bold text-emerald-500 mb-2">100%</div>
-              <div className="text-zinc-400">Automatizado</div>
+              <div className="text-zinc-400">{t('landing.stats.automated')}</div>
             </div>
             <div className="text-center">
               <div className="text-3xl md:text-4xl font-bold text-emerald-500 mb-2">SSL</div>
-              <div className="text-zinc-400">Gratuito incluído</div>
+              <div className="text-zinc-400">{t('landing.stats.freeSSL')}</div>
             </div>
             <div className="text-center">
               <div className="text-3xl md:text-4xl font-bold text-emerald-500 mb-2">24/7</div>
-              <div className="text-zinc-400">Seus apps online</div>
+              <div className="text-zinc-400">{t('landing.stats.online')}</div>
             </div>
           </div>
         </div>
