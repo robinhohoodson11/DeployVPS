@@ -378,14 +378,14 @@ export default function LandingPage() {
         <div className="container mx-auto text-center max-w-3xl">
           <Cloud className="w-16 h-16 text-emerald-500 mx-auto mb-6" />
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Pronto para automatizar seus deploys?
+            {t('landing.cta.title')}
           </h2>
           <p className="text-zinc-400 text-lg mb-8">
-            Crie sua conta gratuitamente e comece a fazer deploy dos seus projetos em minutos.
+            {t('landing.cta.subtitle')}
           </p>
           <Link to="/register">
             <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-lg px-10 py-6">
-              Criar Conta Grátis
+              {t('landing.cta.button')}
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
           </Link>
