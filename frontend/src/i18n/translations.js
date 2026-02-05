@@ -504,6 +504,7 @@ export const translations = {
       close: "Close",
       yes: "Yes",
       no: "No",
+      days: "days",
     },
     // Auth
     auth: {
