@@ -1,112 +1,185 @@
 # DeployVPS - Product Requirements Document
 
 ## Original Problem Statement
-Sistema para automatizar o deploy de aplicações web de repositórios GitHub para VPS do usuário. O sistema deve suportar tanto Nginx quanto Apache2, preservar dados MongoDB durante redeploys, e oferecer configuração de domínio customizado com SSL.
+O usuário quer finalizar uma aplicação "DeployVPS" - um sistema completo para fazer deploy automático de aplicações do GitHub (especialmente projetos do Emergent.sh) em VPS próprias.
 
-## User Personas
-- **Desenvolvedor Individual**: Quer fazer deploy rápido de projetos Emergent/GitHub para seu VPS
-- **Admin de Sistema**: Gerencia múltiplos VPS e deploys com necessidade de monitoramento de segurança
+## Product Overview
+**DeployVPS** é uma plataforma web full-stack (React/FastAPI/MongoDB) que automatiza o deploy de aplicações web do GitHub para servidores VPS do usuário. Suporta projetos Node.js, React, Python/FastAPI com MongoDB, configuração automática de SSL e domínios personalizados.
 
-## Core Requirements (Implemented)
-1. ✅ Autenticação de usuários (JWT)
-2. ✅ Gerenciamento de VPS (CRUD)
-3. ✅ Deploy de projetos GitHub (frontend, backend, full-stack)
-4. ✅ Redeploy preservando dados MongoDB
-5. ✅ Suporte a Apache2 e Nginx
-6. ✅ Configuração de domínio customizado
-7. ✅ SSL via Let's Encrypt
-8. ✅ Visualizador de logs estilo Emergent
-9. ✅ Verificação e hardening de segurança VPS
-10. ✅ Landing page otimizada para SEO
-11. ✅ Sistema de Backup MongoDB (manual + automático)
-12. ✅ Cancelar deploy em andamento
-13. ✅ Aviso ao sair durante deploy ativo
+## Core Features
+
+### Authentication & Users
+- [x] Registro de usuários com aprovação de admin
+- [x] Login com JWT
+- [x] Sistema de expiração de acesso
+- [x] Painel administrativo para gerenciar usuários
+- [x] Alterar senha
+
+### VPS Management
+- [x] Cadastro de servidores VPS (SSH com senha ou chave)
+- [x] Teste de conexão
+- [x] Verificação de segurança (Firewall, Fail2ban)
+- [x] Reforçar segurança automaticamente
+- [x] Suporte a múltiplas VPS por usuário
+
+### Deployment System
+- [x] Deploy automático de projetos GitHub
+- [x] Suporte a Frontend Only, Backend Only, Fullstack
+- [x] Suporte a Nginx e Apache2
+- [x] Docker containerization
+- [x] MongoDB automático para projetos fullstack
+- [x] Seleção inteligente de portas (evita conflitos)
+- [x] Redeploy preservando banco de dados
+- [x] Cancelar deploy em andamento
+- [x] Visualização de logs em tempo real
+
+### Domain & SSL
+- [x] Configuração de domínio personalizado
+- [x] SSL gratuito com Let's Encrypt
+- [x] Remoção de domínio
+
+### Backup System
+- [x] Criar backup manual do MongoDB
+- [x] Listar backups
+- [x] Download de backups
+- [x] Restaurar backup
+- [x] Deletar backup
+- [x] Importar backup externo
+- [x] Configurações de backup automático (UI implementada, cronjob pendente)
+
+### Internationalization (i18n)
+- [x] Suporte a 3 idiomas: Português, English, Español
+- [x] Detecção automática de idioma por IP
+- [x] Seletor de idioma no header
+- [x] Todas as páginas traduzidas:
+  - Landing Page
+  - Login
+  - Register
+  - Dashboard
+  - New Deployment
+  - Deployment Details
+  - VPS Management
+  - Admin Users
+  - Admin Analytics
+
+### SEO Optimization
+- [x] Meta tags otimizadas para deployvps.online
+- [x] Open Graph tags para redes sociais
+- [x] Sitemap.xml com hreflang para 3 idiomas
+- [x] Schema.org structured data
+- [x] Keywords para PT, EN, ES
+
+### Admin Analytics Dashboard
+- [x] Page views (total, hoje, semana, mês)
+- [x] Visitantes únicos
+- [x] Conversões (registros)
+- [x] Taxa de conversão
+- [x] Top páginas visitadas
+- [x] Top países de visitantes
+- [x] Gráfico de visualizações diárias (30 dias)
+- [x] Atividade recente
 
 ## Tech Stack
-- **Frontend**: React + TailwindCSS + Shadcn/UI
-- **Backend**: FastAPI + Python
+- **Frontend**: React 18, TailwindCSS, Shadcn/UI, React Router
+- **Backend**: FastAPI (Python), Motor (MongoDB async)
 - **Database**: MongoDB
-- **Remote Execution**: Paramiko (SSH)
-- **Containerization**: Docker
+- **Deployment**: Docker, Nginx/Apache2
+- **SSL**: Let's Encrypt (certbot)
 
-## Architecture
-```
-/app
-├── backend/
-│   ├── .env          # MONGO_URL, JWT_SECRET
-│   └── server.py     # API monolítica (2700+ linhas - precisa refatorar)
-├── frontend/
-│   ├── public/       # index.html, robots.txt, sitemap.xml
-│   └── src/
-│       ├── pages/    # LandingPage, Dashboard, VPSManagement, DeploymentDetails
-│       └── components/
-```
+## API Endpoints
 
-## Key API Endpoints
-- `POST /api/auth/login` - Login
-- `POST /api/deployments` - Criar deploy
-- `POST /api/deployments/{id}/redeploy` - Redeploy
-- `POST /api/deployments/{id}/cancel` - Cancelar deploy em andamento
-- `DELETE /api/deployments/{id}` - Deletar deploy
-- `GET /api/deployments/{id}/logs` - Logs
-- `POST /api/deployments/{id}/domain` - Configurar domínio
-- `POST /api/deployments/{id}/ssl` - Ativar SSL
-- `GET /api/vps/{id}/security` - Check segurança
-- `POST /api/vps/{id}/security/harden` - Hardening
+### Auth
+- POST /api/auth/register
+- POST /api/auth/login
+- GET /api/auth/me
+- POST /api/auth/change-password
 
-### Backup Endpoints (NEW)
-- `GET /api/deployments/{id}/backups` - Listar backups
-- `POST /api/deployments/{id}/backups` - Criar backup
-- `POST /api/deployments/{id}/backups/{backup_id}/restore` - Restaurar
-- `GET /api/deployments/{id}/backups/{backup_id}/download` - Baixar
-- `DELETE /api/deployments/{id}/backups/{backup_id}` - Excluir
-- `PUT /api/deployments/{id}/backups/settings` - Configurações
+### Admin
+- GET /api/admin/users
+- POST /api/admin/users
+- PUT /api/admin/users/{id}
+- DELETE /api/admin/users/{id}
+- POST /api/admin/users/{id}/approve
+- POST /api/admin/users/{id}/reject
+- GET /api/admin/stats
+- GET /api/admin/analytics
 
-## Prioritized Backlog
+### VPS
+- GET /api/vps
+- POST /api/vps
+- DELETE /api/vps/{id}
+- POST /api/vps/{id}/test
+- GET /api/vps/{id}/available-ports
+- GET /api/vps/{id}/security
+- POST /api/vps/{id}/security/harden
 
-### P0 (Critical)
-- (none)
+### Deployments
+- GET /api/deployments
+- POST /api/deployments
+- GET /api/deployments/{id}
+- POST /api/deployments/{id}/redeploy
+- POST /api/deployments/{id}/stop
+- POST /api/deployments/{id}/cancel
+- DELETE /api/deployments/{id}
+- POST /api/deployments/{id}/domain
+- DELETE /api/deployments/{id}/domain
+- POST /api/deployments/{id}/ssl
+- GET /api/deployments/{id}/logs
 
-### P1 (High)
-- [ ] Finalizar SEO com domínio definitivo (substituir `deployvps.com`)
-- [ ] Implementar cronjob para backups automáticos no VPS
+### Backups
+- GET /api/deployments/{id}/backups
+- POST /api/deployments/{id}/backups
+- GET /api/deployments/{id}/backups/{backup_id}/download
+- POST /api/deployments/{id}/backups/{backup_id}/restore
+- DELETE /api/deployments/{id}/backups/{backup_id}
+- POST /api/deployments/{id}/backups/import
+- PUT /api/deployments/{id}/backups/settings
 
-### P2 (Medium)
-- [ ] Criar imagem Open Graph (1200x630px)
-- [ ] Refatorar server.py em módulos (routers/, services/)
-- [ ] Notificações por email para falhas de backup
+### Analytics
+- POST /api/analytics/track
 
-### P3 (Low)
-- [ ] Desabilitar login root SSH automaticamente (com confirmação)
-- [ ] Suporte a múltiplos repositórios por deploy
+## Domain Configuration
+- **Production Domain**: deployvps.online
+- **SEO Languages**: PT (Brazil), EN (US), ES (Spain/LATAM)
 
-## Completed This Session (Jan 31, 2026)
-- ✅ Bug fix: "Reforçar Segurança" não reinstala Fail2ban/UFW se já ativos
-- ✅ Aviso ao sair da página durante deploy ativo
-- ✅ Botão "Cancelar Deploy" quando status é building/deploying
-- ✅ Sistema completo de Backup MongoDB:
-  - Criar backup manual
-  - Configurações de backup automático (intervalo + max backups)
-  - Listar, restaurar, baixar e excluir backups
-  - **Importar backup** de arquivo externo
-  - Backups salvos no VPS em /var/backups/deployvps/{projeto}/
-- ✅ Bug fix: Conflito de portas no deploy saasv6 (MongoDB na porta errada)
-- ✅ Melhoria no formulário de novo deploy:
-  - 3 campos de porta separados (Frontend, Backend, MongoDB)
-  - Dica de ranges de portas sugeridas
-- ✅ Limpeza de recursos não utilizados no VPS (2.43GB liberados)
+## Test Credentials
+- **Admin**: admin@admin.com / Admin@123
 
-- ✅ Seleção inteligente de portas:
-  - Campo único "Porta Base"
-  - Verificação automática de portas disponíveis no VPS
-  - Sugere Frontend, Backend e MongoDB sem conflitos
-- ✅ Confirmado: Criar usuário admin automático funcionando
+## Pending/Future Tasks
 
-## Credentials (Test)
-- **App**: admin@admin.com / Admin@123
-- **VPS**: 174.138.178.243 / root / Ba4_Paf6=Mi5
+### P1 - High Priority
+- [ ] Open Graph image (og-image.png 1200x630px)
+- [ ] Implementar cronjob para backup automático
 
-## Known Issues
-- VPS tem recursos limitados (2GB RAM) - builds Docker podem travar
-- Projeto `saasv6` precisa patch especial para admin panel via IP
-- Backup automático salva configuração mas não executa cronjob ainda
+### P2 - Medium Priority
+- [ ] Monitoramento em tempo real de CPU/RAM da VPS
+- [ ] Notificações por email (deploy sucesso/falha, baixo espaço)
+- [ ] Histórico de deploys
+- [ ] Rollback para versão anterior
+
+### P3 - Low Priority
+- [ ] Integração com CI/CD (GitHub Actions webhook)
+- [ ] Dashboard de métricas de performance
+- [ ] Suporte a mais banco de dados (PostgreSQL, MySQL)
+- [ ] Multi-tenant (white-label)
+
+## Known Technical Debt
+1. **server.py** é muito grande (2700+ linhas) - precisa ser refatorado em módulos (APIRouter)
+2. **DeploymentDetails.jsx** e **NewDeployment.jsx** são muito grandes - extrair custom hooks
+3. ESLint warnings sobre useEffect dependencies em algumas páginas
+
+## Changelog
+
+### 2025-12-08
+- Implementado sistema completo de i18n (PT, EN, ES)
+- Detecção automática de idioma por IP
+- Atualizado SEO para deployvps.online com suporte multi-idioma
+- Criado Admin Analytics dashboard com tracking de page views
+- Traduzidas todas as páginas do sistema
+
+### Previous Sessions
+- Sistema de backup completo (criar, listar, download, restore, import)
+- Seleção inteligente de portas para novos deploys
+- Cancelar deploy em andamento
+- Limpeza de recursos Docker órfãos
+- Correção de bugs de deploy (conflito de portas)
