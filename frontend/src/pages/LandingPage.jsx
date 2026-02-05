@@ -290,10 +290,10 @@ export default function LandingPage() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Como funciona
+              {t('landing.howItWorks.title')}
             </h2>
             <p className="text-zinc-400 text-lg">
-              3 passos simples para colocar seu projeto no ar
+              {t('landing.howItWorks.subtitle')}
             </p>
           </div>
           
@@ -302,27 +302,27 @@ export default function LandingPage() {
               <div className="w-16 h-16 rounded-full bg-emerald-500 text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
                 1
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Cadastre sua VPS</h3>
+              <h3 className="text-xl font-semibold text-white mb-2">{t('landing.howItWorks.step1.title')}</h3>
               <p className="text-zinc-400">
-                Adicione as credenciais SSH da sua VPS (DigitalOcean, AWS, etc)
+                {t('landing.howItWorks.step1.description')}
               </p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 rounded-full bg-emerald-500 text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
                 2
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Conecte o GitHub</h3>
+              <h3 className="text-xl font-semibold text-white mb-2">{t('landing.howItWorks.step2.title')}</h3>
               <p className="text-zinc-400">
-                Informe o repositório e a branch que deseja fazer deploy
+                {t('landing.howItWorks.step2.description')}
               </p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 rounded-full bg-emerald-500 text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
                 3
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Clique em Deploy</h3>
+              <h3 className="text-xl font-semibold text-white mb-2">{t('landing.howItWorks.step3.title')}</h3>
               <p className="text-zinc-400">
-                Acompanhe os logs em tempo real e acesse seu app online
+                {t('landing.howItWorks.step3.description')}
               </p>
             </div>
           </div>
