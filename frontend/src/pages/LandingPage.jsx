@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { useLanguage } from "../i18n/LanguageContext";
 import LanguageSelector from "../components/LanguageSelector";
+import { API } from "../App";
 import { 
   Rocket, 
   Server, 
@@ -20,7 +22,31 @@ import {
 } from "lucide-react";
 
 export default function LandingPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  
+  // Track page view for analytics
+  useEffect(() => {
+    const trackPageView = async () => {
+      try {
+        // Get country from localStorage (set by LanguageContext)
+        const country = localStorage.getItem('detected_country') || '';
+        
+        await fetch(`${API}/analytics/track`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_type: 'page_view',
+            page: '/',
+            country: country,
+            language: language
+          })
+        });
+      } catch (e) {
+        // Silent fail for analytics
+      }
+    };
+    trackPageView();
+  }, [language]);
   
   const features = [
     {
