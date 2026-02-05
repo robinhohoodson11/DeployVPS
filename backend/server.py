@@ -1618,7 +1618,7 @@ COPY --from=build /app/build /usr/share/nginx/html
 RUN echo 'server {{ \\
     listen 80; \\
     location /api {{ \\
-        proxy_pass http://backend_{db_name}:{backend_port}; \\
+        proxy_pass http://backend_{project_name}:{backend_port}; \\
         proxy_http_version 1.1; \\
         proxy_set_header Upgrade $$http_upgrade; \\
         proxy_set_header Connection "upgrade"; \\
@@ -1703,7 +1703,7 @@ COPY --from=build /app/build /usr/share/nginx/html
 RUN echo 'server {{ \\
     listen 80; \\
     location /api {{ \\
-        proxy_pass http://backend_{db_name}:{backend_port}; \\
+        proxy_pass http://backend_{project_name}:{backend_port}; \\
         proxy_http_version 1.1; \\
         proxy_set_header Upgrade $$http_upgrade; \\
         proxy_set_header Connection "upgrade"; \\
