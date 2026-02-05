@@ -397,47 +397,22 @@ export default function LandingPage() {
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Perguntas Frequentes
+              {t('landing.faq.title')}
             </h2>
             <p className="text-zinc-400 text-lg">
-              Tire suas dúvidas sobre como hospedar projetos do Emergent
+              {t('landing.faq.subtitle')}
             </p>
           </div>
           
           <div className="space-y-4">
-            {[
-              {
-                question: "Como hospedar um site criado no Emergent?",
-                answer: "Com o DeployVPS você pode hospedar qualquer projeto criado no Emergent.sh em sua própria VPS. Basta salvar o projeto no GitHub usando a função 'Save to GitHub' do Emergent, cadastrar sua VPS no DeployVPS e clicar em Deploy. O sistema detecta automaticamente se é React, Node.js, Python ou FastAPI e configura tudo para você, incluindo MongoDB e SSL."
-              },
-              {
-                question: "O DeployVPS funciona com projetos do Emergent.sh?",
-                answer: "Sim! O DeployVPS é 100% compatível com projetos criados no Emergent.sh. Projetos fullstack com React + FastAPI + MongoDB são detectados automaticamente e deployados com as configurações corretas. Você mantém controle total hospedando em sua própria infraestrutura."
-              },
-              {
-                question: "Posso usar minha própria VPS para hospedar apps do Emergent?",
-                answer: "Sim! O DeployVPS permite que você use qualquer VPS (DigitalOcean, AWS, Linode, Vultr, etc.) para hospedar seus projetos do Emergent. Você tem controle total sobre sua infraestrutura e seus dados."
-              },
-              {
-                question: "O deploy inclui banco de dados MongoDB?",
-                answer: "Sim! O DeployVPS cria automaticamente um container MongoDB para seu projeto, com volume persistente para não perder dados. Também cria automaticamente um usuário admin no primeiro deploy, facilitando o acesso ao sistema."
-              },
-              {
-                question: "Como configurar SSL/HTTPS no meu projeto?",
-                answer: "O DeployVPS configura SSL automaticamente usando Let's Encrypt, que é gratuito. Basta configurar um domínio personalizado apontando para sua VPS e clicar em 'Ativar SSL'. O certificado é gratuito e renovado automaticamente."
-              },
-              {
-                question: "O que acontece com meus dados quando faço redeploy?",
-                answer: "O DeployVPS preserva seu banco de dados MongoDB durante o redeploy. Apenas os containers de frontend e backend são recriados, garantindo que você não perca nenhum dado dos seus usuários."
-              }
-            ].map((faq, index) => (
+            {['q1', 'q2', 'q3', 'q4', 'q5', 'q6'].map((qKey, index) => (
               <div key={index} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
                 <h3 className="text-lg font-semibold text-white mb-3 flex items-start gap-3">
                   <span className="text-emerald-500">Q:</span>
-                  {faq.question}
+                  {t(`landing.faq.items.${qKey}.question`)}
                 </h3>
                 <p className="text-zinc-400 pl-7">
-                  <span className="text-emerald-400 font-medium">R:</span> {faq.answer}
+                  <span className="text-emerald-400 font-medium">R:</span> {t(`landing.faq.items.${qKey}.answer`)}
                 </p>
               </div>
             ))}
