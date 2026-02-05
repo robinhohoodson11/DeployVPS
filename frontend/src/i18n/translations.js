@@ -239,6 +239,7 @@ export const translations = {
       close: "Fechar",
       yes: "Sim",
       no: "Não",
+      days: "dias",
     },
     // Auth
     auth: {
