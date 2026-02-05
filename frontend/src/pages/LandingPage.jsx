@@ -173,20 +173,20 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <div className="text-white font-semibold">Emergent</div>
-                    <div className="text-zinc-500 text-sm">Crie seu app com IA</div>
+                    <div className="text-zinc-500 text-sm">{t('landing.emergent.createWithAI')}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-zinc-400 mb-2">
                   <ArrowRight className="w-4 h-4 text-emerald-500" />
-                  <span>Salve no GitHub</span>
+                  <span>{t('landing.emergent.saveToGithub')}</span>
                 </div>
                 <div className="flex items-center gap-2 text-zinc-400 mb-2">
                   <ArrowRight className="w-4 h-4 text-emerald-500" />
-                  <span>Configure sua VPS</span>
+                  <span>{t('landing.emergent.configureVps')}</span>
                 </div>
                 <div className="flex items-center gap-2 text-emerald-400 font-medium">
                   <CheckCircle className="w-4 h-4" />
-                  <span>Deploy automático!</span>
+                  <span>{t('landing.emergent.autoDeploy')}</span>
                 </div>
               </div>
             </div>
