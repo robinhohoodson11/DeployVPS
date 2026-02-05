@@ -11,6 +11,7 @@ import NewDeployment from "./pages/NewDeployment";
 import DeploymentDetails from "./pages/DeploymentDetails";
 import VPSManagement from "./pages/VPSManagement";
 import AdminUsers from "./pages/AdminUsers";
+import AdminAnalytics from "./pages/AdminAnalytics";
 import "./App.css";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -142,6 +143,7 @@ function App() {
           <Route path="/deploy/:id" element={<PrivateRoute><DeploymentDetails /></PrivateRoute>} />
           <Route path="/vps" element={<PrivateRoute><VPSManagement /></PrivateRoute>} />
           <Route path="/admin/users" element={<PrivateRoute><AdminUsers /></PrivateRoute>} />
+          <Route path="/admin/analytics" element={<PrivateRoute><AdminAnalytics /></PrivateRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
