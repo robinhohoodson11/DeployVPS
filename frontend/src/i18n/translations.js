@@ -399,6 +399,88 @@ export const translations = {
         title: "Emergent Compatible",
         subtitle: "Projects created on Emergent platform work perfectly",
         description: "DeployVPS was specially developed to host projects created on Emergent. Just export your project and deploy with one click.",
+        createWithAI: "Create your app with AI",
+        saveToGithub: "Save to GitHub",
+        configureVps: "Configure your VPS",
+        autoDeploy: "Automatic deploy!",
+      },
+      compatibility: {
+        title: "Compatible with your favorite projects",
+        subtitle: "Automatic deploy for major technologies and platforms",
+      },
+      stats: {
+        deployTime: "Average deploy time",
+        automated: "Automated",
+        freeSSL: "Free included",
+        online: "Your apps online",
+      },
+      howItWorks: {
+        title: "How it works",
+        subtitle: "3 simple steps to get your project online",
+        step1: {
+          title: "Register your VPS",
+          description: "Add SSH credentials from your VPS (DigitalOcean, AWS, etc)",
+        },
+        step2: {
+          title: "Connect GitHub",
+          description: "Enter the repository and branch you want to deploy",
+        },
+        step3: {
+          title: "Click Deploy",
+          description: "Follow real-time logs and access your app online",
+        },
+      },
+      benefits: {
+        title: "Why choose DeployVPS?",
+        subtitle: "Automate the deployment process and focus on what really matters: developing your product.",
+        items: [
+          "Deploy React, Node.js, Python projects and more",
+          "Support for Fullstack projects (Frontend + Backend)",
+          "Automatic admin user creation on deploy",
+          "Real-time deploy process logs",
+          "Secure and encrypted environment variables",
+          "Compatible with Nginx and Apache automatically"
+        ],
+      },
+      cta: {
+        title: "Ready to automate your deploys?",
+        subtitle: "Create your account for free and start deploying your projects in minutes.",
+        button: "Create Free Account",
+      },
+      faq: {
+        title: "Frequently Asked Questions",
+        subtitle: "Clear your doubts about hosting Emergent projects",
+        items: {
+          q1: {
+            question: "How to host a site created on Emergent?",
+            answer: "With DeployVPS you can host any project created on Emergent.sh on your own VPS. Just save the project to GitHub using Emergent's 'Save to GitHub' function, register your VPS on DeployVPS and click Deploy.",
+          },
+          q2: {
+            question: "Does DeployVPS work with Emergent.sh projects?",
+            answer: "Yes! DeployVPS is 100% compatible with projects created on Emergent.sh. Fullstack projects with React + FastAPI + MongoDB are automatically detected.",
+          },
+          q3: {
+            question: "Can I use my own VPS?",
+            answer: "Yes! DeployVPS allows you to use any VPS (DigitalOcean, AWS, Linode, Vultr, etc.) to host your projects.",
+          },
+          q4: {
+            question: "Does deploy include MongoDB database?",
+            answer: "Yes! DeployVPS automatically creates a MongoDB container for your project, with persistent volume so you don't lose data.",
+          },
+          q5: {
+            question: "How to configure SSL/HTTPS?",
+            answer: "DeployVPS configures SSL automatically using Let's Encrypt, which is free. Just configure a domain and click 'Enable SSL'.",
+          },
+          q6: {
+            question: "What happens to my data on redeploy?",
+            answer: "DeployVPS preserves your MongoDB database during redeploy. Only frontend and backend containers are recreated.",
+          },
+        },
+      },
+      footer: {
+        copyright: "All rights reserved.",
+        madeWith: "Made with",
+        forDevelopers: "for developers",
       },
       pricing: {
         title: "Simple and Free",
