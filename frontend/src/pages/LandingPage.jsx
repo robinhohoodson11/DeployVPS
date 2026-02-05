@@ -199,10 +199,10 @@ export default function LandingPage() {
         <div className="container mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-              Compatível com seus projetos favoritos
+              {t('landing.compatibility.title')}
             </h2>
             <p className="text-zinc-400 text-lg">
-              Deploy automático para as principais tecnologias e plataformas
+              {t('landing.compatibility.subtitle')}
             </p>
           </div>
           
