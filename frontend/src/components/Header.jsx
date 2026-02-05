@@ -44,12 +44,12 @@ export default function Header() {
     e.preventDefault();
     
     if (passwordForm.new_password !== passwordForm.confirm_password) {
-      toast.error("As senhas não coincidem");
+      toast.error(t('admin.passwordsDontMatch'));
       return;
     }
     
     if (passwordForm.new_password.length < 6) {
-      toast.error("A nova senha deve ter pelo menos 6 caracteres");
+      toast.error(t('admin.passwordTooShort'));
       return;
     }
     
@@ -59,11 +59,11 @@ export default function Header() {
         current_password: passwordForm.current_password,
         new_password: passwordForm.new_password,
       });
-      toast.success("Senha alterada com sucesso!");
+      toast.success(t('admin.passwordChanged'));
       setPasswordDialogOpen(false);
       setPasswordForm({ current_password: "", new_password: "", confirm_password: "" });
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao alterar senha");
+      toast.error(error.response?.data?.detail || t('common.error'));
     } finally {
       setSubmitting(false);
     }
@@ -136,7 +136,7 @@ export default function Header() {
                     className="text-zinc-300 focus:bg-zinc-800 focus:text-white cursor-pointer"
                   >
                     <Key className="w-4 h-4 mr-2" />
-                    Alterar Senha
+                    {t('admin.changePassword')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-zinc-800" />
                   <DropdownMenuItem 
@@ -160,16 +160,16 @@ export default function Header() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Key className="w-5 h-5 text-green-500" />
-              Alterar Senha
+              {t('admin.changePassword')}
             </DialogTitle>
             <DialogDescription className="text-zinc-500">
-              Digite sua senha atual e a nova senha
+              {t('admin.currentPassword')}
             </DialogDescription>
           </DialogHeader>
           
           <form onSubmit={handleChangePassword} className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label className="text-zinc-300">Senha Atual</Label>
+              <Label className="text-zinc-300">{t('admin.currentPassword')}</Label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -181,7 +181,7 @@ export default function Header() {
             </div>
             
             <div className="space-y-2">
-              <Label className="text-zinc-300">Nova Senha</Label>
+              <Label className="text-zinc-300">{t('admin.newPassword')}</Label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -193,7 +193,7 @@ export default function Header() {
             </div>
             
             <div className="space-y-2">
-              <Label className="text-zinc-300">Confirmar Nova Senha</Label>
+              <Label className="text-zinc-300">{t('admin.confirmPassword')}</Label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -214,14 +214,14 @@ export default function Header() {
                 }}
                 className="border-zinc-700"
               >
-                Cancelar
+                {t('common.cancel')}
               </Button>
               <Button
                 type="submit"
                 disabled={submitting}
                 className="bg-green-500 hover:bg-green-600 text-black font-semibold"
               >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Alterar Senha"}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('admin.changePassword')}
               </Button>
             </div>
           </form>
