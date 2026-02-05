@@ -754,6 +754,167 @@ async def get_admin_stats(admin: dict = Depends(require_admin)):
         "admin_users": admin_users
     }
 
+# ============ ANALYTICS TRACKING ============
+
+@api_router.post("/analytics/track")
+async def track_analytics_event(request: Request):
+    """Track page view or event (public endpoint for landing page tracking)"""
+    try:
+        data = await request.json()
+        event_type = data.get("event_type", "page_view")
+        page = data.get("page", "/")
+        
+        # Get visitor info
+        client_ip = get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "")
+        referrer = request.headers.get("Referer", "")
+        
+        # Create a visitor ID hash from IP + User-Agent for unique visitor tracking
+        visitor_hash = hashlib.sha256(f"{client_ip}:{user_agent}".encode()).hexdigest()[:16]
+        
+        event = {
+            "id": str(uuid.uuid4()),
+            "event_type": event_type,
+            "page": page,
+            "visitor_hash": visitor_hash,
+            "ip_country": data.get("country", ""),
+            "user_agent": user_agent[:200],  # Limit size
+            "referrer": referrer[:500] if referrer else "",
+            "language": data.get("language", ""),
+            "timestamp": datetime.now(timezone.utc),
+            "metadata": data.get("metadata", {})
+        }
+        
+        await db.analytics_events.insert_one(event)
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Analytics tracking error: {e}")
+        return {"status": "error"}
+
+@api_router.get("/admin/analytics")
+async def get_analytics(admin: dict = Depends(require_admin)):
+    """Get analytics dashboard data"""
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=7)
+    month_start = today_start - timedelta(days=30)
+    
+    # Page views counts
+    total_views = await db.analytics_events.count_documents({"event_type": "page_view"})
+    today_views = await db.analytics_events.count_documents({
+        "event_type": "page_view",
+        "timestamp": {"$gte": today_start}
+    })
+    week_views = await db.analytics_events.count_documents({
+        "event_type": "page_view",
+        "timestamp": {"$gte": week_start}
+    })
+    month_views = await db.analytics_events.count_documents({
+        "event_type": "page_view",
+        "timestamp": {"$gte": month_start}
+    })
+    
+    # Unique visitors (by visitor_hash)
+    unique_today = len(await db.analytics_events.distinct("visitor_hash", {
+        "event_type": "page_view",
+        "timestamp": {"$gte": today_start}
+    }))
+    unique_week = len(await db.analytics_events.distinct("visitor_hash", {
+        "event_type": "page_view",
+        "timestamp": {"$gte": week_start}
+    }))
+    unique_month = len(await db.analytics_events.distinct("visitor_hash", {
+        "event_type": "page_view",
+        "timestamp": {"$gte": month_start}
+    }))
+    
+    # Conversions (registrations)
+    total_registrations = await db.users.count_documents({})
+    month_registrations = await db.users.count_documents({
+        "created_at": {"$gte": month_start.isoformat()}
+    })
+    week_registrations = await db.users.count_documents({
+        "created_at": {"$gte": week_start.isoformat()}
+    })
+    
+    # Conversion rate (registrations / unique visitors)
+    conversion_rate = round((total_registrations / unique_month * 100), 2) if unique_month > 0 else 0
+    
+    # Top pages
+    top_pages_pipeline = [
+        {"$match": {"event_type": "page_view", "timestamp": {"$gte": month_start}}},
+        {"$group": {"_id": "$page", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]
+    top_pages_cursor = db.analytics_events.aggregate(top_pages_pipeline)
+    top_pages = []
+    async for doc in top_pages_cursor:
+        top_pages.append({"page": doc["_id"], "views": doc["count"]})
+    
+    # Top countries
+    top_countries_pipeline = [
+        {"$match": {"event_type": "page_view", "ip_country": {"$ne": ""}, "timestamp": {"$gte": month_start}}},
+        {"$group": {"_id": "$ip_country", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]
+    top_countries_cursor = db.analytics_events.aggregate(top_countries_pipeline)
+    top_countries = []
+    async for doc in top_countries_cursor:
+        top_countries.append({"country": doc["_id"], "views": doc["count"]})
+    
+    # Daily views for chart (last 30 days)
+    daily_views_pipeline = [
+        {"$match": {"event_type": "page_view", "timestamp": {"$gte": month_start}}},
+        {"$group": {
+            "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]
+    daily_views_cursor = db.analytics_events.aggregate(daily_views_pipeline)
+    daily_views = []
+    async for doc in daily_views_cursor:
+        daily_views.append({"date": doc["_id"], "views": doc["count"]})
+    
+    # Recent activity (last 20 events)
+    recent_events_cursor = db.analytics_events.find(
+        {"event_type": {"$in": ["page_view", "registration", "login"]}}
+    ).sort("timestamp", -1).limit(20)
+    recent_activity = []
+    async for doc in recent_events_cursor:
+        recent_activity.append({
+            "type": doc.get("event_type"),
+            "page": doc.get("page", ""),
+            "country": doc.get("ip_country", ""),
+            "timestamp": doc.get("timestamp").isoformat() if doc.get("timestamp") else ""
+        })
+    
+    return {
+        "page_views": {
+            "total": total_views,
+            "today": today_views,
+            "week": week_views,
+            "month": month_views
+        },
+        "unique_visitors": {
+            "today": unique_today,
+            "week": unique_week,
+            "month": unique_month
+        },
+        "conversions": {
+            "total": total_registrations,
+            "month": month_registrations,
+            "week": week_registrations,
+            "rate": conversion_rate
+        },
+        "top_pages": top_pages,
+        "top_countries": top_countries,
+        "daily_views": daily_views,
+        "recent_activity": recent_activity
+    }
+
 # ============ VPS PORT CHECKER ============
 
 @api_router.get("/vps/{vps_id}/available-ports")
