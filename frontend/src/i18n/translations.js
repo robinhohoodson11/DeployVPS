@@ -747,6 +747,88 @@ export const translations = {
         title: "Compatible con Emergent",
         subtitle: "Proyectos creados en la plataforma Emergent funcionan perfectamente",
         description: "DeployVPS fue desarrollado especialmente para hospedar proyectos creados en Emergent. Solo exporta tu proyecto y despliega con un clic.",
+        createWithAI: "Crea tu app con IA",
+        saveToGithub: "Guarda en GitHub",
+        configureVps: "Configura tu VPS",
+        autoDeploy: "¡Deploy automático!",
+      },
+      compatibility: {
+        title: "Compatible con tus proyectos favoritos",
+        subtitle: "Deploy automático para las principales tecnologías y plataformas",
+      },
+      stats: {
+        deployTime: "Tiempo promedio de deploy",
+        automated: "Automatizado",
+        freeSSL: "Gratuito incluido",
+        online: "Tus apps online",
+      },
+      howItWorks: {
+        title: "Cómo funciona",
+        subtitle: "3 pasos simples para poner tu proyecto en línea",
+        step1: {
+          title: "Registra tu VPS",
+          description: "Añade las credenciales SSH de tu VPS (DigitalOcean, AWS, etc)",
+        },
+        step2: {
+          title: "Conecta GitHub",
+          description: "Ingresa el repositorio y la rama que deseas desplegar",
+        },
+        step3: {
+          title: "Haz clic en Deploy",
+          description: "Sigue los logs en tiempo real y accede a tu app en línea",
+        },
+      },
+      benefits: {
+        title: "¿Por qué elegir DeployVPS?",
+        subtitle: "Automatiza el proceso de deploy y enfócate en lo que realmente importa: desarrollar tu producto.",
+        items: [
+          "Deploy de proyectos React, Node.js, Python y más",
+          "Soporte para proyectos Fullstack (Frontend + Backend)",
+          "Creación automática de usuario admin en el deploy",
+          "Logs del proceso de deploy en tiempo real",
+          "Variables de entorno seguras y encriptadas",
+          "Compatible con Nginx y Apache automáticamente"
+        ],
+      },
+      cta: {
+        title: "¿Listo para automatizar tus deploys?",
+        subtitle: "Crea tu cuenta gratis y comienza a desplegar tus proyectos en minutos.",
+        button: "Crear Cuenta Gratis",
+      },
+      faq: {
+        title: "Preguntas Frecuentes",
+        subtitle: "Aclara tus dudas sobre cómo hospedar proyectos de Emergent",
+        items: {
+          q1: {
+            question: "¿Cómo hospedar un sitio creado en Emergent?",
+            answer: "Con DeployVPS puedes hospedar cualquier proyecto creado en Emergent.sh en tu propia VPS. Solo guarda el proyecto en GitHub usando la función 'Save to GitHub' de Emergent, registra tu VPS en DeployVPS y haz clic en Deploy.",
+          },
+          q2: {
+            question: "¿DeployVPS funciona con proyectos de Emergent.sh?",
+            answer: "¡Sí! DeployVPS es 100% compatible con proyectos creados en Emergent.sh. Los proyectos fullstack con React + FastAPI + MongoDB se detectan automáticamente.",
+          },
+          q3: {
+            question: "¿Puedo usar mi propia VPS?",
+            answer: "¡Sí! DeployVPS te permite usar cualquier VPS (DigitalOcean, AWS, Linode, Vultr, etc.) para hospedar tus proyectos.",
+          },
+          q4: {
+            question: "¿El deploy incluye base de datos MongoDB?",
+            answer: "¡Sí! DeployVPS crea automáticamente un contenedor MongoDB para tu proyecto, con volumen persistente para no perder datos.",
+          },
+          q5: {
+            question: "¿Cómo configurar SSL/HTTPS?",
+            answer: "DeployVPS configura SSL automáticamente usando Let's Encrypt, que es gratuito. Solo configura un dominio y haz clic en 'Activar SSL'.",
+          },
+          q6: {
+            question: "¿Qué pasa con mis datos en el redeploy?",
+            answer: "DeployVPS preserva tu base de datos MongoDB durante el redeploy. Solo los contenedores de frontend y backend se recrean.",
+          },
+        },
+      },
+      footer: {
+        copyright: "Todos los derechos reservados.",
+        madeWith: "Hecho con",
+        forDevelopers: "para desarrolladores",
       },
       pricing: {
         title: "Simple y Gratuito",
