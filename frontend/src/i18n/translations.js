@@ -273,6 +273,7 @@ export const translations = {
       newDeploy: "New Deploy",
       users: "Users",
       logout: "Logout",
+      analytics: "Analytics",
     },
     // Landing Page
     landing: {
