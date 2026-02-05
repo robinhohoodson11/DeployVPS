@@ -262,10 +262,10 @@ export default function LandingPage() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Tudo que você precisa para deploy
+              {t('landing.features.title')}
             </h2>
             <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
-              Ferramentas poderosas para automatizar o deploy dos seus projetos em qualquer VPS.
+              {t('landing.features.subtitle')}
             </p>
           </div>
           
