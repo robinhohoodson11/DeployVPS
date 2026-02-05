@@ -1231,9 +1231,10 @@ db.users.insertOne({{
     "id": "{user_id}",
     "name": "Administrador",
     "email": "{admin_email}",
-    "password": "{password_hash}",
+    "password_hash": "{password_hash}",
     "role": "admin",
     "status": "active",
+    "expires_at": null,
     "created_at": new Date().toISOString()
 }});
 print("Admin user created successfully!");
