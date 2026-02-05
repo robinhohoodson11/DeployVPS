@@ -82,12 +82,12 @@ export default function LandingPage() {
   ];
 
   const benefits = [
-    "Deploy de projetos React, Node.js, Python e mais",
-    "Suporte a projetos Fullstack (Frontend + Backend)",
-    "Criação automática de usuário admin no deploy",
-    "Logs em tempo real do processo de deploy",
-    "Variáveis de ambiente seguras e criptografadas",
-    "Compatível com Nginx e Apache automaticamente"
+    t('landing.benefits.items.0') || "Deploy de projetos React, Node.js, Python e mais",
+    t('landing.benefits.items.1') || "Suporte a projetos Fullstack (Frontend + Backend)",
+    t('landing.benefits.items.2') || "Criação automática de usuário admin no deploy",
+    t('landing.benefits.items.3') || "Logs em tempo real do processo de deploy",
+    t('landing.benefits.items.4') || "Variáveis de ambiente seguras e criptografadas",
+    t('landing.benefits.items.5') || "Compatível com Nginx e Apache automaticamente"
   ];
 
   return (
