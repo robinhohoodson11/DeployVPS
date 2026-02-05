@@ -99,14 +99,23 @@ export default function Header() {
               </Link>
               
               {user?.role === "admin" && (
-                <Link 
-                  to="/admin/users" 
-                  className="text-sm text-yellow-500 hover:text-yellow-400 transition-colors flex items-center gap-1"
-                  data-testid="nav-admin"
-                >
-                  <Shield className="w-4 h-4" />
-                  Admin
-                </Link>
+                <>
+                  <Link 
+                    to="/admin/users" 
+                    className="text-sm text-yellow-500 hover:text-yellow-400 transition-colors flex items-center gap-1"
+                    data-testid="nav-admin"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Admin
+                  </Link>
+                  <Link 
+                    to="/admin/analytics" 
+                    className="text-sm text-purple-500 hover:text-purple-400 transition-colors flex items-center gap-1"
+                    data-testid="nav-analytics"
+                  >
+                    {t('header.analytics')}
+                  </Link>
+                </>
               )}
               
               <LanguageSelector />
