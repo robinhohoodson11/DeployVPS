@@ -335,10 +335,10 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
             <div>
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-                Por que escolher o DeployVPS?
+                {t('landing.benefits.title')}
               </h2>
               <p className="text-zinc-400 text-lg mb-8">
-                Automatize o processo de deploy e foque no que realmente importa: desenvolver seu produto.
+                {t('landing.benefits.subtitle')}
               </p>
               <ul className="space-y-4">
                 {benefits.map((benefit, index) => (
