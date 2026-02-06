@@ -1,5 +1,5 @@
 # DeployVPS - Robots.txt
-# https://deployvps.com
+# https://deployvps.online
 
 User-agent: *
 Allow: /
@@ -9,7 +9,7 @@ Disallow: /vps
 Disallow: /admin/
 
 # Sitemaps
-Sitemap: https://deployvps.com/sitemap.xml
+Sitemap: https://deployvps.online/sitemap.xml
 
 # Crawl-delay para ser gentil com os servidores
 Crawl-delay: 1
