@@ -1628,8 +1628,9 @@ COPY frontend/ .
 RUN apk add --no-cache python3 && echo "{hostname_fix_b64}" | base64 -d | python3 || true
 ENV CI=false
 ENV DISABLE_ESLINT_PLUGIN=true
-ENV REACT_APP_BACKEND_URL=http://{vps_host}:{backend_port}
-ENV REACT_APP_API_URL=http://{vps_host}:{backend_port}/api
+# Use empty URL so frontend uses relative paths (/api) - works with both HTTP and HTTPS
+ENV REACT_APP_BACKEND_URL=
+ENV REACT_APP_API_URL=/api
 RUN npm run build
 
 FROM nginx:alpine
