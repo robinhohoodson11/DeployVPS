@@ -1600,24 +1600,8 @@ print(f"Total files fixed: {{fixed}}")
 """
             hostname_fix_b64 = base64.b64encode(hostname_fix_script.encode()).decode()
             
-            nginx_config = '''server {
-    listen 80;
-    location /api {
-        proxy_pass http://backend_PROJECTNAME:BACKENDPORT;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_cache_bypass $http_upgrade;
-    }
-    location / {
-        root /usr/share/nginx/html;
-        index index.html index.htm;
-        try_files $uri $uri/ /index.html;
-    }
-}'''
-            nginx_config = nginx_config.replace('PROJECTNAME', project_name).replace('BACKENDPORT', str(backend_port))
+            # Nginx config as single line to avoid Dockerfile issues
+            nginx_config_oneline = f'server {{ listen 80; location /api {{ proxy_pass http://backend_{project_name}:{backend_port}; proxy_http_version 1.1; proxy_set_header Upgrade $$http_upgrade; proxy_set_header Connection "upgrade"; proxy_set_header Host $$host; proxy_set_header X-Real-IP $$remote_addr; proxy_cache_bypass $$http_upgrade; }} location / {{ root /usr/share/nginx/html; index index.html index.htm; try_files $$uri $$uri/ /index.html; }} }}'
             
             frontend_dockerfile = f"""FROM node:18-alpine as build
 WORKDIR /app
@@ -1637,7 +1621,7 @@ RUN npm run build
 
 FROM nginx:alpine
 COPY --from=build /app/build /usr/share/nginx/html
-RUN echo '{nginx_config}' > /etc/nginx/conf.d/default.conf
+RUN echo '{nginx_config_oneline}' > /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 """
