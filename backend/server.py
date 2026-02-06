@@ -1600,8 +1600,9 @@ print(f"Total files fixed: {{fixed}}")
 """
             hostname_fix_b64 = base64.b64encode(hostname_fix_script.encode()).decode()
             
-            # Nginx config as single line to avoid Dockerfile issues
-            nginx_config_oneline = f'server {{ listen 80; location /api {{ proxy_pass http://backend_{project_name}:{backend_port}; proxy_http_version 1.1; proxy_set_header Upgrade $$http_upgrade; proxy_set_header Connection "upgrade"; proxy_set_header Host $$host; proxy_set_header X-Real-IP $$remote_addr; proxy_cache_bypass $$http_upgrade; }} location / {{ root /usr/share/nginx/html; index index.html index.htm; try_files $$uri $$uri/ /index.html; }} }}'
+            # Nginx config - use regular string (not f-string) to preserve $ characters
+            nginx_config_oneline = 'server { listen 80; location /api { proxy_pass http://backend_PROJ:PORT; proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_cache_bypass $http_upgrade; } location / { root /usr/share/nginx/html; index index.html index.htm; try_files $uri $uri/ /index.html; } }'
+            nginx_config_oneline = nginx_config_oneline.replace('PROJ', project_name).replace('PORT', str(backend_port))
             
             frontend_dockerfile = f"""FROM node:18-alpine as build
 WORKDIR /app
