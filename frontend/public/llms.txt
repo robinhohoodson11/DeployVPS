@@ -1,0 +1,54 @@
+# DeployVPS
+> Plataforma para hospedar projetos do Emergent.sh em sua própria VPS com deploy automático
+
+## O que é o DeployVPS?
+DeployVPS é uma ferramenta que permite fazer deploy automático de projetos criados no Emergent.sh para sua própria VPS. Suporta React, FastAPI, Node.js, Python com MongoDB integrado, SSL grátis e domínio personalizado.
+
+## Para quem é?
+- Desenvolvedores que criaram aplicações no Emergent.sh
+- Quem quer hospedagem própria em vez de serviços como Vercel/Netlify
+- Quem precisa de controle total sobre a infraestrutura
+- Projetos que precisam de MongoDB persistente
+
+## Problema que resolve
+Quando você cria um app no Emergent.sh, precisa de um lugar para hospedá-lo permanentemente. O DeployVPS automatiza todo o processo de deploy para sua VPS, configurando Docker, Nginx, MongoDB e SSL automaticamente.
+
+## Funcionalidades principais
+- Deploy com 1 clique de projetos GitHub
+- Detecção automática do tipo de projeto (React, FastAPI, Node.js)
+- MongoDB automático com dados persistentes
+- SSL/HTTPS grátis via Let's Encrypt
+- Domínio personalizado
+- Redeploy sem perder dados do banco
+- Suporte a múltiplos projetos na mesma VPS
+- Painel de controle para gerenciar deployments
+
+## Tecnologias suportadas
+- Frontend: React, Vue, Angular, Next.js
+- Backend: FastAPI, Node.js, Express, Python
+- Banco de dados: MongoDB (automático)
+- Servidor: Nginx, Docker
+- SSL: Let's Encrypt
+
+## Como funciona
+1. Salve seu projeto do Emergent.sh no GitHub
+2. Cadastre sua VPS no DeployVPS (DigitalOcean, AWS, Linode, etc.)
+3. Informe o repositório GitHub e clique em Deploy
+4. O sistema detecta o tipo de projeto e configura tudo automaticamente
+5. Opcionalmente configure domínio personalizado e SSL
+
+## Idiomas disponíveis
+- Português (Brasil)
+- English
+- Español
+
+## Links
+- Site: https://deployvps.online
+- Cadastro: https://deployvps.online/register
+- Login: https://deployvps.online/login
+
+## Palavras-chave relacionadas
+hospedar site emergent, deploy emergent, hospedar projeto emergent.sh, como hospedar app do emergent, hospedagem vps, deploy automático, self-hosted, alternativa vercel, alternativa netlify
+
+## Contato
+Site: https://deployvps.online
