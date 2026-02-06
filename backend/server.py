@@ -1221,7 +1221,8 @@ async def create_admin_user(ssh, mongodb_port: int, admin_email: str, admin_pass
         # Escape special characters for MongoDB shell
         escaped_hash = password_hash.replace("$", "\\$")
         
-        # Create the admin user document with properly generated hash
+        # Create the admin user document with BOTH password and password_hash fields
+        # This ensures compatibility with different project auth implementations
         admin_script = f'''
 docker exec mongodb_{db_name} mongosh --eval '
 db = db.getSiblingDB("{db_name}");
@@ -1231,6 +1232,7 @@ db.users.insertOne({{
     "id": "{user_id}",
     "name": "Administrador",
     "email": "{admin_email}",
+    "password": "{password_hash}",
     "password_hash": "{password_hash}",
     "role": "admin",
     "status": "active",
