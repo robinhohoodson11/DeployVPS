@@ -1631,11 +1631,14 @@ CMD ["nginx", "-g", "daemon off;"]
                 f.write(frontend_dockerfile)
             sftp.close()
             
-            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && docker build --no-cache -f Dockerfile.frontend -t {frontend_container}:latest . 2>&1")
+            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && timeout 600 docker build --no-cache -f Dockerfile.frontend -t {frontend_container}:latest . 2>&1")
             build_output = stdout.read().decode()
             await add_deployment_log(deployment_id, build_output[-1500:] if len(build_output) > 1500 else build_output)
             
-            if stdout.channel.recv_exit_status() != 0:
+            exit_status = stdout.channel.recv_exit_status()
+            if exit_status == 124:
+                raise Exception("Frontend build timeout (10 min) - projeto pode ser muito grande")
+            elif exit_status != 0:
                 raise Exception("Frontend build failed")
             
             # Stop and remove existing frontend container (wait for completion)
