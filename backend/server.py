@@ -223,8 +223,12 @@ class DeploymentResponse(BaseModel):
     deploy_type: Optional[str] = None  # "frontend_only", "backend_only", "fullstack"
     backend_port: Optional[int] = None
     admin_credentials: Optional[dict] = None
+    error_type: Optional[str] = None  # "github_token_invalid", "ssh_error", etc.
     created_at: str
     updated_at: str
+
+class GithubTokenUpdate(BaseModel):
+    github_token: str
 
 class DomainConfig(BaseModel):
     domain: str
@@ -1330,10 +1334,37 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict, is_red
         stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir} && rm -rf app && git clone -b {branch} {repo_url} app 2>&1")
         clone_output = stdout.read().decode()
         clone_error = stderr.read().decode()
-        await add_deployment_log(deployment_id, clone_output or clone_error)
+        clone_combined = clone_output + clone_error
+        await add_deployment_log(deployment_id, clone_combined if clone_combined.strip() else "Cloning...")
         
         if stdout.channel.recv_exit_status() != 0:
-            raise Exception(f"Git clone failed: {clone_error}")
+            # Check if error is related to authentication/token
+            auth_error_indicators = [
+                "Authentication failed",
+                "Invalid credentials", 
+                "could not read Username",
+                "fatal: Authentication failed",
+                "Permission denied",
+                "Repository not found",
+                "remote: Invalid username or password",
+                "The requested URL returned error: 403",
+                "The requested URL returned error: 401",
+                "remote: Repository not found",
+                "could not read Password",
+                "Bad credentials"
+            ]
+            
+            is_auth_error = any(indicator.lower() in clone_combined.lower() for indicator in auth_error_indicators)
+            
+            if is_auth_error:
+                await db.deployments.update_one(
+                    {"id": deployment_id}, 
+                    {"$set": {"error_type": "github_token_invalid"}}
+                )
+                await add_deployment_log(deployment_id, "⚠️ Falha de autenticação no GitHub. Token pode estar expirado ou inválido.", "error")
+                raise Exception(f"GitHub authentication failed - token may be expired or invalid")
+            else:
+                raise Exception(f"Git clone failed: {clone_combined}")
         
         await update_deployment_status(deployment_id, DeployStatus.BUILDING)
         await add_deployment_log(deployment_id, "Analyzing project structure...")
@@ -1939,12 +1970,81 @@ async def redeploy(deployment_id: str, background_tasks: BackgroundTasks, user: 
     if not vps:
         raise HTTPException(status_code=404, detail="VPS not found")
     
-    await db.deployments.update_one({"id": deployment_id}, {"$set": {"status": DeployStatus.PENDING, "logs": []}})
+    # Clear error_type on redeploy
+    await db.deployments.update_one({"id": deployment_id}, {"$set": {"status": DeployStatus.PENDING, "logs": [], "error_type": None}})
     # Pass is_redeploy=True to preserve MongoDB data
     background_tasks.add_task(run_deployment, deployment_id, vps, deployment, is_redeploy=True)
     
     deployment["status"] = DeployStatus.PENDING
     deployment["logs"] = []
+    deployment["error_type"] = None
+    return DeploymentResponse(**{k: v for k, v in deployment.items() if k != "github_token_encrypted"})
+
+@api_router.put("/deployments/{deployment_id}/github-token")
+async def update_github_token(deployment_id: str, data: GithubTokenUpdate, user: dict = Depends(get_current_user)):
+    """
+    Update the GitHub token for a deployment.
+    Useful when the original token has expired.
+    """
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    # Encrypt and store the new token
+    encrypted_token = encrypt_data(data.github_token) if data.github_token else None
+    
+    await db.deployments.update_one(
+        {"id": deployment_id},
+        {"$set": {
+            "github_token_encrypted": encrypted_token,
+            "error_type": None  # Clear the error type since user is providing new token
+        }}
+    )
+    
+    return {"message": "GitHub token updated successfully"}
+
+@api_router.post("/deployments/{deployment_id}/redeploy-with-token", response_model=DeploymentResponse)
+async def redeploy_with_token(
+    deployment_id: str, 
+    data: GithubTokenUpdate,
+    background_tasks: BackgroundTasks, 
+    user: dict = Depends(get_current_user)
+):
+    """
+    Update GitHub token and immediately redeploy.
+    Useful when redeploy fails due to expired token.
+    """
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    # Encrypt and store the new token
+    encrypted_token = encrypt_data(data.github_token) if data.github_token else None
+    
+    # Update token and reset deployment status
+    await db.deployments.update_one(
+        {"id": deployment_id},
+        {"$set": {
+            "github_token_encrypted": encrypted_token,
+            "status": DeployStatus.PENDING,
+            "logs": [],
+            "error_type": None
+        }}
+    )
+    
+    # Update local deployment dict with new token for the background task
+    deployment["github_token_encrypted"] = encrypted_token
+    
+    # Start redeploy
+    background_tasks.add_task(run_deployment, deployment_id, vps, deployment, is_redeploy=True)
+    
+    deployment["status"] = DeployStatus.PENDING
+    deployment["logs"] = []
+    deployment["error_type"] = None
     return DeploymentResponse(**{k: v for k, v in deployment.items() if k != "github_token_encrypted"})
 
 @api_router.post("/deployments/{deployment_id}/stop")

@@ -141,6 +141,11 @@ export default function DeploymentDetails() {
   const [backupDialogOpen, setBackupDialogOpen] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
 
+  // GitHub token update states
+  const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
+  const [newGithubToken, setNewGithubToken] = useState("");
+  const [tokenUpdateLoading, setTokenUpdateLoading] = useState(false);
+
   const fetchBackups = async () => {
     try {
       const res = await api.get(`/deployments/${id}/backups`);
@@ -253,6 +258,28 @@ export default function DeploymentDetails() {
       toast.error("Erro ao iniciar redeploy");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleRedeployWithToken = async () => {
+    if (!newGithubToken.trim()) {
+      toast.error("Por favor, informe o token do GitHub");
+      return;
+    }
+    
+    setTokenUpdateLoading(true);
+    try {
+      await api.post(`/deployments/${id}/redeploy-with-token`, {
+        github_token: newGithubToken
+      });
+      toast.success("Token atualizado e redeploy iniciado!");
+      setTokenDialogOpen(false);
+      setNewGithubToken("");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao atualizar token");
+    } finally {
+      setTokenUpdateLoading(false);
     }
   };
 
@@ -581,6 +608,35 @@ export default function DeploymentDetails() {
             </div>
           </CardContent>
         </Card>
+
+        {/* GitHub Token Error Alert */}
+        {deployment.status === "failed" && deployment.error_type === "github_token_invalid" && (
+          <Card className="bg-red-500/10 border-red-500/30">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-500/20 rounded-lg">
+                    <Lock className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-red-400">{t('details.githubToken.errorTitle')}</h4>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      {t('details.githubToken.errorDescription')}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setTokenDialogOpen(true)}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  {t('details.githubToken.updateButton')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-6 md:grid-cols-3">
           {/* Info Cards */}
@@ -1194,6 +1250,76 @@ export default function DeploymentDetails() {
           </div>
         </div>
       </main>
+
+      {/* GitHub Token Update Dialog */}
+      <Dialog open={tokenDialogOpen} onOpenChange={setTokenDialogOpen}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-red-400" />
+              {t('details.githubToken.dialogTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-zinc-500">
+              {t('details.githubToken.dialogDescription')}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="github-token">{t('details.githubToken.newToken')}</Label>
+              <Input
+                id="github-token"
+                type="password"
+                placeholder={t('details.githubToken.placeholder')}
+                value={newGithubToken}
+                onChange={(e) => setNewGithubToken(e.target.value)}
+                className="bg-zinc-800 border-zinc-700"
+              />
+              <p className="text-xs text-zinc-500">
+                {t('details.githubToken.help')}{" "}
+                <a 
+                  href="https://github.com/settings/tokens" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:underline"
+                >
+                  {t('details.githubToken.linkText')}
+                </a>
+              </p>
+            </div>
+            
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setTokenDialogOpen(false);
+                  setNewGithubToken("");
+                }}
+                className="flex-1 border-zinc-700"
+              >
+                {t('details.githubToken.cancel')}
+              </Button>
+              <Button
+                onClick={handleRedeployWithToken}
+                disabled={tokenUpdateLoading || !newGithubToken.trim()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+              >
+                {tokenUpdateLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    {t('details.githubToken.updating')}
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    {t('details.githubToken.submit')}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

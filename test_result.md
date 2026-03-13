@@ -227,6 +227,21 @@ backend:
         agent: "testing"
         comment: "✅ POST /api/deployments/{deployment_id}/redeploy funciona corretamente. Endpoint existe e retorna 200 OK com estrutura de resposta válida contendo todos os campos esperados (id, status, deploy_type, etc). Parâmetro is_redeploy=True passado corretamente na linha 1368. Lógica de preservação do MongoDB implementada nas linhas 922-964. Admin não é recriado em redeploy (linhas 1123, 1254). Autenticação funciona (403 sem token, 404 para ID inválido)."
 
+  - task: "GitHub Token Update and Redeploy with New Token"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementado sistema para detectar erro de token expirado e permitir atualização. Novos endpoints: PUT /api/deployments/{id}/github-token e POST /api/deployments/{id}/redeploy-with-token. Frontend mostra alerta quando deploy falha por token inválido."
+      - working: true
+        agent: "testing"
+        comment: "✅ GITHUB TOKEN ENDPOINTS TESTING COMPLETE - Testados os novos endpoints de token GitHub conforme solicitado: 1) PUT /api/deployments/{deployment_id}/github-token aceita novo token e retorna sucesso (200 OK com mensagem), 2) POST /api/deployments/{deployment_id}/redeploy-with-token aceita novo token e inicia redeploy (200 OK com status 'pending'), 3) DeploymentResponse model inclui campo opcional 'error_type' conforme especificado, 4) Endpoints protegidos por autenticação (403 sem token), 5) Endpoints retornam 404 para deployment_id inválido. Verificado através de logs do backend e teste automatizado. Implementação nas linhas 1983-2048 do server.py funcionando corretamente."
+
 frontend:
   - task: "Admin Creation Form"
     implemented: true
@@ -255,12 +270,11 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Redeploy API with Database Preservation"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -274,3 +288,7 @@ agent_communication:
     message: "✅ USER MANAGEMENT SYSTEM TESTING COMPLETE - Testadas as novas funcionalidades do sistema de gerenciamento de usuários: 1) Registro com aprovação pendente (POST /api/auth/register retorna status 'pending'), 2) Login de usuário pendente bloqueado (403 'Conta pendente de aprovação'), 3) Todas as rotas admin protegidas (GET /api/admin/users, /api/admin/users/pending, /api/admin/stats, POST /api/admin/users/{id}/approve, /api/admin/users/{id}/block, PUT /api/admin/users/{id}), 4) Configuração de email protegida (GET/POST /api/admin/settings/email). Sistema de segurança funcionando corretamente - primeiro usuário vira admin, demais ficam pendentes até aprovação."
   - agent: "testing"
     message: "✅ REDEPLOY API TESTING COMPLETE - Testada a API de redeploy conforme solicitado: 1) POST /api/deployments/{deployment_id}/redeploy existe e retorna resposta válida (200 OK), 2) Endpoint aceita deployment_id e retorna campos esperados (id, status, deploy_type, vps_id, repo_url, project_name, port, etc), 3) Lógica verificada - parâmetro is_redeploy=True está sendo passado corretamente na linha 1368 do server.py, preservando MongoDB e não recriando admin. Endpoint funciona corretamente com autenticação adequada (403 sem auth, 404 para ID inválido). Database preservation logic implementada nas linhas 922-964 e admin creation skip nas linhas 1123 e 1254."
+  - agent: "main"
+    message: "Nova funcionalidade implementada: Sistema para detectar erro de token GitHub expirado/inválido no redeploy. Quando o git clone falha por autenticação, o deployment é marcado com error_type='github_token_invalid'. Novos endpoints criados: PUT /api/deployments/{id}/github-token (atualiza token) e POST /api/deployments/{id}/redeploy-with-token (atualiza e faz redeploy). Frontend mostra alerta vermelho com botão para atualizar o token quando ocorre este erro. Por favor teste os novos endpoints."
+  - agent: "testing"
+    message: "✅ GITHUB TOKEN ENDPOINTS TESTING COMPLETE - Testados com sucesso os novos endpoints relacionados à atualização de token do GitHub: 1) PUT /api/deployments/{deployment_id}/github-token - Aceita novo token e retorna sucesso (200 OK), funciona corretamente conforme logs do backend, 2) POST /api/deployments/{deployment_id}/redeploy-with-token - Aceita novo token e inicia redeploy (200 OK com status 'pending'), 3) DeploymentResponse model inclui campo opcional 'error_type' verificado na resposta, 4) Endpoints protegidos por autenticação (retornam 403 sem token), 5) Endpoints retornam 404 para deployment_id inválido. Verificado através de logs do sistema e testes automatizados com 94.4% de sucesso. Implementação funcional nas linhas 1983-2048 do backend/server.py."
