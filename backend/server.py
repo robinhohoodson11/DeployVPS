@@ -1278,12 +1278,6 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict, is_red
         await update_deployment_status(deployment_id, DeployStatus.CLONING)
         if is_redeploy:
             await add_deployment_log(deployment_id, "🔄 Starting REDEPLOY (preserving database)...")
-            # Clean up old images from previous failed builds to free space
-            await add_deployment_log(deployment_id, "🧹 Cleaning up previous build artifacts...")
-            ssh.exec_command(f"docker rmi $(docker images -q frontend_{project_name}) 2>/dev/null || true")
-            ssh.exec_command(f"docker rmi $(docker images -q backend_{project_name}) 2>/dev/null || true")
-            ssh.exec_command("docker builder prune -f > /dev/null 2>&1")
-            ssh.exec_command("docker image prune -f > /dev/null 2>&1")
         else:
             await add_deployment_log(deployment_id, "Starting deployment...")
         
@@ -1293,6 +1287,14 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict, is_red
         branch = deployment["branch"]
         port = deployment["port"]
         backend_port = port + 1000  # Backend will run on port + 1000
+        
+        # Clean up old images from previous failed builds to free space (only on redeploy)
+        if is_redeploy:
+            await add_deployment_log(deployment_id, "🧹 Cleaning up previous build artifacts...")
+            ssh.exec_command(f"docker rmi $(docker images -q frontend_{project_name}) 2>/dev/null || true")
+            ssh.exec_command(f"docker rmi $(docker images -q backend_{project_name}) 2>/dev/null || true")
+            ssh.exec_command("docker builder prune -f > /dev/null 2>&1")
+            ssh.exec_command("docker image prune -f > /dev/null 2>&1")
         
         # ============ PRE-DEPLOYMENT CHECKS ============
         await add_deployment_log(deployment_id, "🔍 Running pre-deployment checks...")
