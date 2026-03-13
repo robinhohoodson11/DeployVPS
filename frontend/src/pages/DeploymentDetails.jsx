@@ -484,9 +484,30 @@ export default function DeploymentDetails() {
     }
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copiado!");
+  const copyToClipboard = async (text) => {
+    try {
+      // Try modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        toast.success("Copiado!");
+      } else {
+        // Fallback for older browsers or non-HTTPS
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+        toast.success("Copiado!");
+      }
+    } catch (err) {
+      console.error("Erro ao copiar:", err);
+      toast.error("Erro ao copiar. Selecione manualmente o texto.");
+    }
   };
 
   const handleNavigateBack = () => {
