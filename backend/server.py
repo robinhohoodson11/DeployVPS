@@ -445,7 +445,10 @@ async def login(credentials: UserLogin, request: Request):
     
     # Check user status
     status = user.get("status", "active")
-    if status == "pending":
+    role = user.get("role", "user")
+    
+    # Admins can login even if pending (first user case)
+    if status == "pending" and role != "admin":
         raise HTTPException(status_code=403, detail="Conta pendente de aprovação pelo administrador.")
     if status == "blocked":
         raise HTTPException(status_code=403, detail="Conta bloqueada. Entre em contato com o administrador.")
