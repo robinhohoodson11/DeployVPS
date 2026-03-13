@@ -1278,6 +1278,12 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict, is_red
         await update_deployment_status(deployment_id, DeployStatus.CLONING)
         if is_redeploy:
             await add_deployment_log(deployment_id, "🔄 Starting REDEPLOY (preserving database)...")
+            # Clean up old images from previous failed builds to free space
+            await add_deployment_log(deployment_id, "🧹 Cleaning up previous build artifacts...")
+            ssh.exec_command(f"docker rmi $(docker images -q frontend_{project_name}) 2>/dev/null || true")
+            ssh.exec_command(f"docker rmi $(docker images -q backend_{project_name}) 2>/dev/null || true")
+            ssh.exec_command("docker builder prune -f > /dev/null 2>&1")
+            ssh.exec_command("docker image prune -f > /dev/null 2>&1")
         else:
             await add_deployment_log(deployment_id, "Starting deployment...")
         
@@ -1540,11 +1546,14 @@ CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "{b
                 f.write(backend_dockerfile)
             sftp.close()
             
-            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && docker build --no-cache -f Dockerfile.backend -t {backend_container}:latest . 2>&1")
+            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && timeout 1800 docker build --no-cache -f Dockerfile.backend -t {backend_container}:latest . 2>&1")
             build_output = stdout.read().decode()
             await add_deployment_log(deployment_id, build_output[-1500:] if len(build_output) > 1500 else build_output)
             
-            if stdout.channel.recv_exit_status() != 0:
+            exit_status = stdout.channel.recv_exit_status()
+            if exit_status == 124:
+                raise Exception("Backend build timeout (30 min) - projeto pode ser muito grande ou VPS com poucos recursos")
+            elif exit_status != 0:
                 raise Exception("Backend build failed")
             
             # Stop and remove existing backend container (wait for completion)
@@ -1612,13 +1621,13 @@ CMD ["nginx", "-g", "daemon off;"]
                 f.write(frontend_dockerfile)
             sftp.close()
             
-            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && timeout 600 docker build --no-cache -f Dockerfile.frontend -t {frontend_container}:latest . 2>&1")
+            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && timeout 1800 docker build --no-cache -f Dockerfile.frontend -t {frontend_container}:latest . 2>&1")
             build_output = stdout.read().decode()
             await add_deployment_log(deployment_id, build_output[-1500:] if len(build_output) > 1500 else build_output)
             
             exit_status = stdout.channel.recv_exit_status()
             if exit_status == 124:
-                raise Exception("Frontend build timeout (10 min) - projeto pode ser muito grande")
+                raise Exception("Frontend build timeout (30 min) - projeto pode ser muito grande ou VPS com poucos recursos")
             elif exit_status != 0:
                 raise Exception("Frontend build failed")
             
