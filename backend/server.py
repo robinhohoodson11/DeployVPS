@@ -1329,6 +1329,49 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict, is_red
         except ValueError:
             await add_deployment_log(deployment_id, "⚠️ Could not check disk space", "warning")
         
+        # ============ MEMORY CHECK & SWAP SETUP ============
+        # Check available memory
+        stdin, stdout, stderr = ssh.exec_command("free -m | grep Mem | awk '{print $2, $7}'")
+        mem_info = stdout.read().decode().strip().split()
+        if len(mem_info) >= 2:
+            total_mem = int(mem_info[0])
+            available_mem = int(mem_info[1])
+            await add_deployment_log(deployment_id, f"💾 RAM: {available_mem}MB available of {total_mem}MB total")
+            
+            # Check if swap exists
+            stdin, stdout, stderr = ssh.exec_command("swapon --show | wc -l")
+            swap_count = int(stdout.read().decode().strip() or "0")
+            
+            if swap_count <= 1 and total_mem < 4096:
+                # No swap and less than 4GB RAM - create swap
+                await add_deployment_log(deployment_id, "⚠️ Low memory detected. Creating SWAP for build stability...", "warning")
+                
+                # Create 2GB swap file
+                swap_commands = [
+                    "sudo swapoff /swapfile 2>/dev/null || true",
+                    "sudo rm -f /swapfile 2>/dev/null || true",
+                    "sudo fallocate -l 2G /swapfile 2>/dev/null || sudo dd if=/dev/zero of=/swapfile bs=1M count=2048 2>/dev/null",
+                    "sudo chmod 600 /swapfile",
+                    "sudo mkswap /swapfile",
+                    "sudo swapon /swapfile"
+                ]
+                
+                for cmd in swap_commands:
+                    stdin, stdout, stderr = ssh.exec_command(cmd)
+                    stdout.channel.recv_exit_status()
+                
+                # Verify swap was created
+                stdin, stdout, stderr = ssh.exec_command("free -m | grep Swap | awk '{print $2}'")
+                swap_total = stdout.read().decode().strip()
+                if swap_total and int(swap_total) > 0:
+                    await add_deployment_log(deployment_id, f"✅ SWAP created: {swap_total}MB", "success")
+                else:
+                    await add_deployment_log(deployment_id, "⚠️ Could not create SWAP, continuing anyway...", "warning")
+            elif swap_count > 1:
+                stdin, stdout, stderr = ssh.exec_command("free -m | grep Swap | awk '{print $2}'")
+                swap_total = stdout.read().decode().strip()
+                await add_deployment_log(deployment_id, f"✅ SWAP already configured: {swap_total}MB", "success")
+        
         # Add GitHub token if provided for private repos
         if deployment.get("github_token_encrypted"):
             token = decrypt_data(deployment["github_token_encrypted"])
@@ -1609,6 +1652,9 @@ COPY frontend/ .
 RUN apk add --no-cache python3 && echo "{hostname_fix_b64}" | base64 -d | python3 || true
 ENV CI=false
 ENV DISABLE_ESLINT_PLUGIN=true
+ENV GENERATE_SOURCEMAP=false
+# Limit Node.js memory to prevent OOM on low-memory VPS
+ENV NODE_OPTIONS="--max-old-space-size=1024"
 # Use empty URL so frontend uses relative paths (/api) - works with both HTTP and HTTPS
 ENV REACT_APP_BACKEND_URL=
 ENV REACT_APP_API_URL=/api
