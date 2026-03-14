@@ -2307,34 +2307,45 @@ async def configure_domain(deployment_id: str, config: DomainConfig, user: dict 
     try:
         ssh = get_ssh_client(vps)
         
-        # Detect web server (Apache or Nginx)
+        # Detect web server (Apache or Nginx) - check both port 80 and 443
         stdin, stdout, stderr = ssh.exec_command("which apache2 apachectl 2>/dev/null | head -1")
         has_apache = bool(stdout.read().decode().strip())
         
         stdin, stdout, stderr = ssh.exec_command("which nginx 2>/dev/null")
         has_nginx = bool(stdout.read().decode().strip())
         
-        # Check which one is actually running/listening on port 80
-        stdin, stdout, stderr = ssh.exec_command("netstat -tlnp 2>/dev/null | grep ':80' | head -1")
-        port_80_info = stdout.read().decode()
+        # Check which one is actually running/listening on port 80 and 443
+        stdin, stdout, stderr = ssh.exec_command("netstat -tlnp 2>/dev/null | grep -E ':80|:443' | head -3")
+        ports_info = stdout.read().decode().lower()
         
-        use_apache = "apache" in port_80_info.lower() or (has_apache and not has_nginx)
+        # Prioritize Apache if it's listening on either port
+        use_apache = "apache" in ports_info or (has_apache and not has_nginx)
         web_server = "apache" if use_apache else "nginx"
         
         await add_deployment_log(deployment_id, f"Detected web server: {web_server.upper()}", "info")
         
         sftp = ssh.open_sftp()
         
+        # Save web_server choice for SSL configuration later
+        await db.deployments.update_one({"id": deployment_id}, {"$set": {"web_server": web_server}})
+        
         if use_apache:
             # ============ APACHE CONFIGURATION ============
             if deploy_type == "fullstack":
+                # Fullstack: proxy both frontend and backend API
                 apache_config = f"""<VirtualHost *:80>
     ServerName {domain}
     
-    # Redirect to HTTPS
-    RewriteEngine On
-    RewriteCond %{{HTTPS}} off
-    RewriteRule ^(.*)$ https://%{{HTTP_HOST}}%{{REQUEST_URI}} [L,R=301]
+    ProxyPreserveHost On
+    ProxyRequests Off
+    
+    # Backend API (must come before /)
+    ProxyPass /api http://127.0.0.1:{backend_port}/api
+    ProxyPassReverse /api http://127.0.0.1:{backend_port}/api
+    
+    # Frontend
+    ProxyPass / http://127.0.0.1:{port}/
+    ProxyPassReverse / http://127.0.0.1:{port}/
 </VirtualHost>
 """
             else:
@@ -2456,11 +2467,14 @@ async def configure_ssl(deployment_id: str, user: dict = Depends(get_current_use
     try:
         ssh = get_ssh_client(vps)
         
-        # Auto-detect web server if not stored
+        # Use stored web_server or auto-detect if not stored
         if not deployment.get("web_server"):
-            stdin, stdout, stderr = ssh.exec_command("netstat -tlnp 2>/dev/null | grep ':80' | head -1")
-            port_80_info = stdout.read().decode()
-            web_server = "apache" if "apache" in port_80_info.lower() else "nginx"
+            # Check both port 80 and 443 for better detection
+            stdin, stdout, stderr = ssh.exec_command("netstat -tlnp 2>/dev/null | grep -E ':80|:443' | head -3")
+            ports_info = stdout.read().decode().lower()
+            web_server = "apache" if "apache" in ports_info else "nginx"
+            # Save for future use
+            await db.deployments.update_one({"id": deployment_id}, {"$set": {"web_server": web_server}})
         
         await add_deployment_log(deployment_id, f"Configuring SSL with {web_server.upper()}...", "info")
         
