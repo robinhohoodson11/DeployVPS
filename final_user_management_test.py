@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 class FinalUserManagementTester:
-    def __init__(self, base_url="https://github-auth-retry.preview.emergentagent.com"):
+    def __init__(self, base_url="https://redeploy-fallback.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0

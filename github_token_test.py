@@ -5,7 +5,7 @@ from datetime import datetime
 
 class GitHubTokenTester:
     def __init__(self):
-        self.base_url = "https://github-auth-retry.preview.emergentagent.com"
+        self.base_url = "https://redeploy-fallback.preview.emergentagent.com"
         self.api_url = f"{self.base_url}/api"
         self.token = None
         self.user_id = None
