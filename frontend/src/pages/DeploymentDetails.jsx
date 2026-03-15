@@ -311,8 +311,29 @@ export default function DeploymentDetails() {
     }
   };
 
+  const handleStart = async () => {
+    setActionLoading("start");
+    try {
+      await api.post(`/deployments/${id}/start`);
+      toast.success("Container iniciado!");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao iniciar container");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleDelete = async () => {
-    if (!window.confirm("Tem certeza? Isso irá remover o container e todos os dados.")) return;
+    // Check if deployment is running
+    if (deployment.status === "running") {
+      toast.error("Pare o deployment antes de excluir!", {
+        description: "Use o botão de parar (⬛) primeiro."
+      });
+      return;
+    }
+    
+    if (!window.confirm("Tem certeza? Isso irá remover o container, imagens, volumes e todos os dados do projeto.")) return;
     
     try {
       await api.delete(`/deployments/${id}`);
@@ -596,8 +617,23 @@ export default function DeploymentDetails() {
                     disabled={actionLoading === "stop"}
                     data-testid="stop-btn"
                     className="border-zinc-700 hover:bg-red-500/10 hover:text-red-500"
+                    title="Parar"
                   >
                     {actionLoading === "stop" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Square className="w-4 h-4" />}
+                  </Button>
+                )}
+                
+                {(deployment.status === "stopped" || deployment.status === "failed") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleStart}
+                    disabled={actionLoading === "start"}
+                    data-testid="start-btn"
+                    className="border-zinc-700 hover:bg-green-500/10 hover:text-green-500"
+                    title="Iniciar"
+                  >
+                    {actionLoading === "start" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                   </Button>
                 )}
                 

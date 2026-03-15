@@ -1849,6 +1849,33 @@ CMD ["nginx", "-g", "daemon off;"]
         logger.error(f"Deployment failed: {e}")
         await update_deployment_status(deployment_id, DeployStatus.FAILED)
         await add_deployment_log(deployment_id, f"Deployment failed: {str(e)}", "error")
+        
+        # Cleanup partial deployment to avoid orphan resources
+        try:
+            if 'ssh' in locals() and ssh:
+                project_name = deployment.get("project_name", "")
+                if project_name:
+                    await add_deployment_log(deployment_id, "🧹 Limpando recursos parciais...", "info")
+                    # Stop and remove partial containers (but NOT MongoDB if is_redeploy)
+                    containers_to_cleanup = [
+                        f"frontend_{project_name}",
+                        f"backend_{project_name}",
+                        f"deploy_{project_name}",
+                    ]
+                    # Only cleanup MongoDB on new deploys that fail
+                    if not is_redeploy:
+                        containers_to_cleanup.append(f"mongodb_{project_name}")
+                    
+                    for container in containers_to_cleanup:
+                        ssh.exec_command(f"docker stop {container} 2>/dev/null")
+                        ssh.exec_command(f"docker rm -f {container} 2>/dev/null")
+                    
+                    # Clean build cache
+                    ssh.exec_command("docker builder prune -f 2>/dev/null")
+                    await add_deployment_log(deployment_id, "✅ Recursos parciais limpos", "info")
+                ssh.close()
+        except:
+            pass  # Best effort cleanup
 
 # ============ DEPLOYMENT ROUTES ============
 
@@ -2141,6 +2168,62 @@ async def stop_deployment(deployment_id: str, user: dict = Depends(get_current_u
         await add_deployment_log(deployment_id, "All containers stopped", "info")
         
         return {"message": "Containers stopped"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/deployments/{deployment_id}/start")
+async def start_deployment(deployment_id: str, user: dict = Depends(get_current_user)):
+    """Start/resume a stopped deployment"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "user_id": user["id"]}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    # Only allow starting if deployment is stopped
+    if deployment["status"] not in ["stopped", "failed"]:
+        raise HTTPException(status_code=400, detail="Deployment não está parado")
+    
+    vps = await db.vps.find_one({"id": deployment["vps_id"], "user_id": user["id"]}, {"_id": 0})
+    if not vps:
+        raise HTTPException(status_code=404, detail="VPS not found")
+    
+    try:
+        ssh = get_ssh_client(vps)
+        project_name = deployment['project_name']
+        deploy_type = deployment.get('deploy_type', 'static')
+        
+        started_containers = []
+        
+        if deploy_type == "fullstack":
+            # Start MongoDB first
+            stdin, stdout, stderr = ssh.exec_command(f"docker start mongodb_{project_name} 2>/dev/null")
+            if not stderr.read().decode().strip():
+                started_containers.append("mongodb")
+            
+            # Start backend
+            stdin, stdout, stderr = ssh.exec_command(f"docker start backend_{project_name} 2>/dev/null")
+            if not stderr.read().decode().strip():
+                started_containers.append("backend")
+            
+            # Start frontend
+            stdin, stdout, stderr = ssh.exec_command(f"docker start frontend_{project_name} 2>/dev/null")
+            if not stderr.read().decode().strip():
+                started_containers.append("frontend")
+        else:
+            # Single container deployment
+            stdin, stdout, stderr = ssh.exec_command(f"docker start deploy_{project_name} 2>/dev/null")
+            if not stderr.read().decode().strip():
+                started_containers.append("app")
+        
+        ssh.close()
+        
+        if started_containers:
+            await update_deployment_status(deployment_id, DeployStatus.RUNNING)
+            await add_deployment_log(deployment_id, f"Containers iniciados: {', '.join(started_containers)}", "success")
+            return {"message": "Containers started", "started": started_containers}
+        else:
+            raise HTTPException(status_code=500, detail="Nenhum container encontrado. Tente fazer redeploy.")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
