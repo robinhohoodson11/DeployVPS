@@ -1591,9 +1591,8 @@ CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "{b
                 f.write(backend_dockerfile)
             sftp.close()
             
-            # Use cache for redeploys to speed up builds
-            cache_flag = "" if is_redeploy else "--no-cache"
-            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && timeout 1800 docker build {cache_flag} -f Dockerfile.backend -t {backend_container}:latest . 2>&1")
+            # Always use --no-cache to ensure new code is used (especially important for redeploys)
+            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && timeout 1800 docker build --no-cache -f Dockerfile.backend -t {backend_container}:latest . 2>&1")
             build_output = stdout.read().decode()
             await add_deployment_log(deployment_id, build_output[-1500:] if len(build_output) > 1500 else build_output)
             
@@ -1671,9 +1670,8 @@ CMD ["nginx", "-g", "daemon off;"]
                 f.write(frontend_dockerfile)
             sftp.close()
             
-            # Use cache for redeploys to speed up builds
-            cache_flag = "" if is_redeploy else "--no-cache"
-            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && timeout 1800 docker build {cache_flag} -f Dockerfile.frontend -t {frontend_container}:latest . 2>&1")
+            # Always use --no-cache to ensure new code is used (especially important for redeploys)
+            stdin, stdout, stderr = ssh.exec_command(f"cd {base_dir}/app && timeout 1800 docker build --no-cache -f Dockerfile.frontend -t {frontend_container}:latest . 2>&1")
             build_output = stdout.read().decode()
             await add_deployment_log(deployment_id, build_output[-1500:] if len(build_output) > 1500 else build_output)
             
