@@ -1288,6 +1288,35 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict, is_red
         port = deployment["port"]
         backend_port = port + 1000  # Backend will run on port + 1000
         
+        # ============ CHECK REPOSITORY SIZE ============
+        # Try to get repo size from GitHub API
+        repo_size_mb = 0
+        try:
+            # Extract owner/repo from URL
+            import re
+            match = re.search(r'github\.com[/:]([^/]+)/([^/.]+)', repo_url)
+            if match:
+                owner, repo = match.groups()
+                repo = repo.replace('.git', '')
+                
+                # Get repo info from GitHub API
+                import aiohttp
+                headers = {"Accept": "application/vnd.github.v3+json"}
+                github_token = None
+                if deployment.get("github_token_encrypted"):
+                    github_token = decrypt_data(deployment["github_token_encrypted"])
+                    headers["Authorization"] = f"token {github_token}"
+                
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(f"https://api.github.com/repos/{owner}/{repo}", headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                        if resp.status == 200:
+                            repo_data = await resp.json()
+                            repo_size_kb = repo_data.get("size", 0)
+                            repo_size_mb = repo_size_kb / 1024
+                            await add_deployment_log(deployment_id, f"📦 Repository size: {repo_size_mb:.1f}MB")
+        except Exception as e:
+            await add_deployment_log(deployment_id, f"⚠️ Could not check repo size: {str(e)[:50]}", "warning")
+        
         # Clean up old images from previous failed builds to free space (only on redeploy)
         if is_redeploy:
             await add_deployment_log(deployment_id, "🧹 Cleaning up previous build artifacts...")
@@ -1299,33 +1328,52 @@ async def run_deployment(deployment_id: str, vps: dict, deployment: dict, is_red
         # ============ PRE-DEPLOYMENT CHECKS ============
         await add_deployment_log(deployment_id, "🔍 Running pre-deployment checks...")
         
-        # Check disk space
+        # Check disk space - get available space in MB
+        stdin, stdout, stderr = ssh.exec_command("df / --output=avail -BM | tail -1 | tr -d 'M '")
+        disk_avail = stdout.read().decode().strip()
         stdin, stdout, stderr = ssh.exec_command("df / --output=pcent | tail -1 | tr -d ' %'")
         disk_usage = stdout.read().decode().strip()
+        
         try:
             disk_percent = int(disk_usage)
-            if disk_percent > 90:
-                await add_deployment_log(deployment_id, f"⚠️ Disk usage at {disk_percent}%! Cleaning up (preserving MongoDB volumes)...", "warning")
+            disk_available_mb = int(disk_avail) if disk_avail.isdigit() else 0
+            
+            # Estimate required space based on repo size and deploy type
+            # Rule: repo_size * 5 (for node_modules, build artifacts, docker layers) + base overhead
+            base_overhead_mb = 1500 if deployment.get("create_mongodb") else 800
+            repo_multiplier = 5  # Account for dependencies, build, docker layers
+            estimated_required_mb = base_overhead_mb + int(repo_size_mb * repo_multiplier)
+            
+            # Minimum required space
+            min_required_mb = max(estimated_required_mb, 1000)
+            
+            await add_deployment_log(deployment_id, f"💾 Disk: {disk_available_mb}MB available ({disk_percent}% used) | Estimated need: ~{min_required_mb}MB")
+            
+            if disk_available_mb < min_required_mb:
+                await add_deployment_log(deployment_id, f"⚠️ Low disk space! Need ~{min_required_mb}MB, have {disk_available_mb}MB. Cleaning up...", "warning")
                 # Auto cleanup - NEVER remove volumes to preserve MongoDB data
                 # Only remove unused images and build cache
-                ssh.exec_command("docker image prune -f > /dev/null 2>&1")  # Remove dangling images only
-                ssh.exec_command("docker builder prune -f > /dev/null 2>&1")  # Remove build cache
-                ssh.exec_command("journalctl --vacuum-time=2d > /dev/null 2>&1")  # Clean old logs
+                ssh.exec_command("docker image prune -af > /dev/null 2>&1")  # Remove ALL unused images
+                ssh.exec_command("docker builder prune -af > /dev/null 2>&1")  # Remove ALL build cache
+                ssh.exec_command("journalctl --vacuum-time=1d > /dev/null 2>&1")  # Clean old logs
+                ssh.exec_command("apt-get clean > /dev/null 2>&1")  # Clean apt cache
                 # DO NOT run: docker container prune (might remove stopped containers during redeploy)
                 # DO NOT run: docker volume prune (would delete MongoDB data)
                 # DO NOT run: docker system prune (too aggressive)
                 await asyncio.sleep(3)
                 
                 # Recheck
-                stdin, stdout, stderr = ssh.exec_command("df / --output=pcent | tail -1 | tr -d ' %'")
-                disk_usage_after = stdout.read().decode().strip()
-                disk_percent_after = int(disk_usage_after) if disk_usage_after.isdigit() else 0
-                await add_deployment_log(deployment_id, f"✅ Disk cleanup complete. Now at {disk_percent_after}%", "success")
+                stdin, stdout, stderr = ssh.exec_command("df / --output=avail -BM | tail -1 | tr -d 'M '")
+                disk_avail_after = stdout.read().decode().strip()
+                disk_available_mb_after = int(disk_avail_after) if disk_avail_after.isdigit() else 0
+                await add_deployment_log(deployment_id, f"✅ Cleanup complete. Now {disk_available_mb_after}MB available", "success")
                 
-                if disk_percent_after > 95:
-                    raise Exception(f"Disk space critically low ({disk_percent_after}%). Please free up space manually.")
+                if disk_available_mb_after < 500:
+                    raise Exception(f"Espaço em disco insuficiente! Disponível: {disk_available_mb_after}MB. Necessário: pelo menos 500MB. Libere espaço manualmente na VPS.")
+            elif disk_percent > 90:
+                await add_deployment_log(deployment_id, f"⚠️ Disk usage high ({disk_percent}%)! Consider cleaning up after deploy.", "warning")
             else:
-                await add_deployment_log(deployment_id, f"✅ Disk space OK ({disk_percent}% used)", "success")
+                await add_deployment_log(deployment_id, f"✅ Disk space OK ({disk_available_mb}MB available)", "success")
         except ValueError:
             await add_deployment_log(deployment_id, "⚠️ Could not check disk space", "warning")
         
